@@ -73,13 +73,16 @@ state = gameReducer(state, {
   playedIds: [],
 });
 const actor = powerEligible(state)[0];
-state = gameReducer(state, { type: "USE_POWER", teamIndex: actor, kind: "hint" });
-if (!state.hintVisible || state.teams[actor].cooldowns.hint !== 3) throw new Error("hint cooldown");
+const beforeTimer = state.timer;
+state = gameReducer(state, { type: "USE_POWER", teamIndex: actor, kind: "time" });
+if (state.timer !== beforeTimer + 20 || state.teams[actor].cooldowns.time !== 3) {
+  throw new Error("time power cooldown");
+}
 state = gameReducer(state, { type: "LOCK" });
 state = gameReducer(state, { type: "LOCK" });
 state = gameReducer(state, { type: "REVEAL" });
 state = gameReducer(state, { type: "AWARD", teamIndex: null });
-if (state.teams[actor].cooldowns.hint !== 3) throw new Error("hint decayed on the same question");
+if (state.teams[actor].cooldowns.time !== 3) throw new Error("time decayed on the same question");
 
 let multi = gameReducer(createInitialState(), {
   type: "START_DRAFT",
@@ -130,20 +133,16 @@ if (blown.teams[1].score !== before + 1000) throw new Error("doubled award");
 
 const quiet = publicAnnouncement({
   question: "ما السؤال؟",
-  hint: "تلميح سري",
   options: ["أ", "ب"],
   answer: "الإجابة السرية",
-  hintVisible: false,
   optionsVisible: false,
   answerRevealed: false,
 });
 if (quiet.text.includes("السرية") || quiet.key !== "question") throw new Error("speech leaked the answer");
 const aloud = publicAnnouncement({
   question: "ما السؤال؟",
-  hint: "تلميح",
   options: [],
   answer: "الإجابة السرية",
-  hintVisible: false,
   optionsVisible: false,
   answerRevealed: true,
 });

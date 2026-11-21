@@ -30,7 +30,16 @@ import {
 } from "@/lib/gameReducer";
 import { mergeQuestions, toQuestion } from "@/lib/parsePack";
 import { SoundEngine } from "@/lib/sounds";
-import { normalizeHostSettings, type GameMode, type GameState, type PowerKind, type Question } from "@/lib/types";
+import {
+  normalizeCooldowns,
+  normalizeHostSettings,
+  type GameMode,
+  type GameState,
+  type PowerKind,
+  type PowerUse,
+  type Question,
+  type TeamPowerKind,
+} from "@/lib/types";
 
 type GameApi = {
   state: GameState;
@@ -44,7 +53,7 @@ type GameApi = {
   pickCategory: (category: string) => void;
   finishDraft: () => void;
   openTile: (tileId: string) => void;
-  usePower: (teamIndex: number, kind: "hint" | "choice" | "skip") => void;
+  usePower: (teamIndex: number, kind: TeamPowerKind) => void;
   toggleMute: () => void;
   resetPlayed: () => void;
   saveQuestion: (draft: Question, isNew: boolean) => string | null;
@@ -57,14 +66,34 @@ const GameContext = createContext<GameApi | null>(null);
 
 function sanitize(input: GameState): GameState {
   const base = createInitialState();
+  const teams = Array.isArray(input.teams)
+    ? input.teams.map((team) => ({
+        ...team,
+        cooldowns: normalizeCooldowns(team.cooldowns),
+      }))
+    : [];
+  const usedThisQuestion: PowerUse[] = Array.isArray(input.usedThisQuestion)
+    ? input.usedThisQuestion.flatMap((entry) => {
+        const use = entry as { teamIndex?: number; kind?: string };
+        const raw = use.kind;
+        const kind: PowerKind | null =
+          raw === "hint" || raw === "ask"
+            ? "time"
+            : raw === "time" || raw === "choice" || raw === "skip" || raw === "steal"
+              ? raw
+              : null;
+        if (kind == null || typeof use.teamIndex !== "number") return [];
+        return [{ teamIndex: use.teamIndex, kind }];
+      })
+    : [];
   return {
     ...base,
     ...input,
-    teams: Array.isArray(input.teams) ? input.teams : [],
+    teams,
     board: Array.isArray(input.board) ? input.board : [],
     draftPicks: Array.isArray(input.draftPicks) ? input.draftPicks : [],
     lockedOutTeamIds: Array.isArray(input.lockedOutTeamIds) ? input.lockedOutTeamIds : [],
-    usedThisQuestion: Array.isArray(input.usedThisQuestion) ? input.usedThisQuestion : [],
+    usedThisQuestion,
     optionsOrder: Array.isArray(input.optionsOrder) ? input.optionsOrder : [],
     settings: normalizeHostSettings(input.settings),
     pointMultiplier:
@@ -233,7 +262,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "OPEN_TILE", tileId, questions: bank, playedIds });
   }, [bank, playedIds]);
 
-  const usePower = useCallback((teamIndex: number, kind: "hint" | "choice" | "skip") => {
+  const usePower = useCallback((teamIndex: number, kind: TeamPowerKind) => {
     const tile = state.board.find((item) => item.id === state.currentTileId);
     const question = tile ? bank.find((item) => item.id === tile.questionId) : undefined;
     dispatch({

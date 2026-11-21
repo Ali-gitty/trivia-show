@@ -21,8 +21,8 @@ state = {
   ...state,
   phase: "primary",
   teams: [
-    { id: "a", name: "الأول", color: "#22d3ee", score: 0, cooldowns: { hint: 0, choice: 0, skip: 0, steal: 0 } },
-    { id: "b", name: "الثاني", color: "#fb923c", score: 0, cooldowns: { hint: 0, choice: 0, skip: 0, steal: 0 } },
+    { id: "a", name: "الأول", color: "#22d3ee", score: 0, cooldowns: { time: 0, choice: 0, skip: 0, steal: 0 } },
+    { id: "b", name: "الثاني", color: "#fb923c", score: 0, cooldowns: { time: 0, choice: 0, skip: 0, steal: 0 } },
   ],
   board: [
     {
@@ -51,15 +51,17 @@ if (hidden.question?.prompt !== question.question || hidden.question.answer !== 
 const waved = buildSnapshot(state, question, "kraft", "waves");
 if (waved.pattern !== "waves") throw new Error("pattern was dropped");
 
-state = { ...state, hintVisible: true, optionsVisible: true, optionsOrder: [...question.options], answerRevealed: true };
+state = { ...state, optionsVisible: true, optionsOrder: [...question.options], answerRevealed: true };
 const shown = buildSnapshot(state, question, "tide");
-if (shown.question?.answer !== secret || shown.question.hint !== hint || shown.palette !== "tide") {
+if (shown.question?.answer !== secret || shown.question.options?.[0] !== secret || shown.palette !== "tide") {
   throw new Error("reveal did not publish the public fields");
 }
-if (JSON.stringify(shown).includes("hostPeek")) throw new Error("peek flag leaked");
+if (JSON.stringify(shown).includes("hostPeek") || JSON.stringify(shown).includes(hint)) {
+  throw new Error("peek or hint leaked");
+}
 
 const activity = buildSnapshot(
-  { ...state, answerRevealed: false, hintVisible: false, optionsVisible: false },
+  { ...state, answerRevealed: false, optionsVisible: false },
   { ...question, kind: "activity", answer: "معيار سري" },
   "nope",
 );
