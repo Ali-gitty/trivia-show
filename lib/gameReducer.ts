@@ -29,7 +29,7 @@ export type Action =
   | { type: "START_DRAFT"; mode: GameState["mode"]; teams: { name: string; color: string }[] }
   | { type: "PICK_CATEGORY"; category: string; questions: Question[]; playedIds: number[] }
   | { type: "FINISH_DRAFT"; questions: Question[]; playedIds: number[] }
-  | { type: "OPEN_TILE"; tileId: string; questions: Question[] }
+  | { type: "OPEN_TILE"; tileId: string; questions: Question[]; playedIds: number[] }
   | {
       type: "REPLACE_CURRENT";
       questions: Question[];
@@ -349,16 +349,31 @@ export function gameReducer(state: GameState, action: Action): GameState {
       if (state.phase !== "board") return state;
       const tile = state.board.find((item) => item.id === action.tileId && item.status === "open");
       if (!tile) return state;
-      const question = action.questions.find((item) => item.id === tile.questionId);
-      if (!question) return { ...state, notice: "هذا السؤال لم يعد موجوداً في البنك" };
+      const exclude = state.board.map((item) => item.questionId).filter((id) => id > 0);
+      const picked =
+        tile.questionId > 0
+          ? (() => {
+              const existing = action.questions.find((item) => item.id === tile.questionId);
+              return existing
+                ? { question: existing, reused: Boolean(tile.reused) }
+                : null;
+            })()
+          : selectQuestion(action.questions, tile.category, tile.points, action.playedIds, exclude);
+      if (!picked) return { ...state, notice: "لا توجد أسئلة متاحة لهذه الخانة" };
+      const board = state.board.map((item) =>
+        item.id === tile.id
+          ? { ...item, questionId: picked.question.id, reused: picked.reused }
+          : item,
+      );
       const opened = {
         ...state,
         ...questionFields(),
+        board,
         currentTileId: tile.id,
         notice: null,
         cue: sound(state, "tile"),
       };
-      if (question.kind === "activity") {
+      if (picked.question.kind === "activity") {
         return { ...opened, phase: "adjudicate", timer: 0, timerRunning: false };
       }
       if (state.mode === "classic") {

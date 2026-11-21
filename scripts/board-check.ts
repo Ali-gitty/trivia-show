@@ -19,21 +19,39 @@ function question(id: number, points: Points): Question {
 }
 
 const pool = [1, 2, 3, 4].map((id) => question(id, 100));
-const first = selectQuestion(pool, "تجربة", 100, [], [], () => 0);
-const last = selectQuestion(pool, "تجربة", 100, [], [], () => 0.99);
-if (first?.question.id !== 1 || last?.question.id !== 4) throw new Error("random draw did not cover the pool");
-const skipped = selectQuestion(pool, "تجربة", 100, [1, 2], [], () => 0);
-if (skipped?.question.id !== 3 || skipped.reused) throw new Error("played questions were drawn again");
+const low = selectQuestion(pool, "تجربة", 100, [], [], () => 0);
+const high = selectQuestion(pool, "تجربة", 100, [], [], () => 0.99);
+if (!low || !high || low.question.id === high.question.id) {
+  throw new Error("random draw did not cover different rolls");
+}
+const skipped = selectQuestion(pool, "تجربة", 100, [1, 2], [], () => 0.5);
+if (!skipped || skipped.reused || ![3, 4].includes(skipped.question.id)) {
+  throw new Error("played questions were drawn again");
+}
 const repeated = new Set<number>();
-for (let roll = 0; roll < 20; roll += 1) {
-  const picked = selectQuestion(pool, "تجربة", 100, [], [], () => roll / 20);
+for (let roll = 0; roll < 40; roll += 1) {
+  const picked = selectQuestion(pool, "تجربة", 100, [], [], Math.random);
   if (!picked) throw new Error("empty draw");
   repeated.add(picked.question.id);
 }
 if (repeated.size < 2) throw new Error("draw stayed on one question");
 
-const built = buildBoard(["تجربة"], [question(10, 100), question(11, 200), question(12, 300), question(13, 400), question(14, 500)], []);
+const built = buildBoard(
+  ["تجربة"],
+  [question(10, 100), question(11, 200), question(12, 300), question(13, 400), question(14, 500)],
+  [],
+);
 if (built.error || built.board.length !== 5) throw new Error(built.error ?? "board size");
+if (built.board.some((tile) => tile.questionId !== 0)) throw new Error("board must defer question picks");
+
+const many = Array.from({ length: 40 }, (_, index) => question(100 + index, 100));
+const draws = new Set<number>();
+for (let round = 0; round < 40; round += 1) {
+  const picked = selectQuestion(many, "تجربة", 100, [], [], Math.random);
+  if (!picked) throw new Error("empty random draw");
+  draws.add(picked.question.id);
+}
+if (draws.size < 10) throw new Error(`random draw too narrow: ${draws.size}`);
 
 const expectPoints: Record<number, Points> = {
   23: 300,
@@ -57,16 +75,20 @@ for (const [id, points] of Object.entries(expectPoints)) {
   if (!found || found.points !== points) throw new Error(`points for ${id} are ${found?.points}, expected ${points}`);
 }
 
-const tiers = new Map<string, Set<number>>();
+const tiers = new Map<string, Map<number, number>>();
 for (const item of bank) {
-  const set = tiers.get(item.category) ?? new Set<number>();
-  set.add(item.points);
+  const set = tiers.get(item.category) ?? new Map<number, number>();
+  set.set(item.points, (set.get(item.points) ?? 0) + 1);
   tiers.set(item.category, set);
 }
 for (const [category, set] of tiers) {
+  let total = 0;
   for (const tier of [100, 200, 300, 400, 500]) {
-    if (!set.has(tier)) throw new Error(`${category} has no ${tier}`);
+    const count = set.get(tier) ?? 0;
+    total += count;
+    if (count < 1) throw new Error(`${category} has no ${tier}`);
   }
+  if (total < 50) throw new Error(`${category} has only ${total} questions`);
 }
 
 const lost = bank.find((item) => item.id === 277);
