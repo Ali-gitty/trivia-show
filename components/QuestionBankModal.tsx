@@ -5,7 +5,7 @@ import { Download, Plus, Search, Trash2, Upload, X } from "lucide-react";
 import { POINT_VALUES, type Points, type Question } from "@/lib/types";
 import { parseDocx, parseJsonPack } from "@/lib/parsePack";
 import { useGame } from "./GameProvider";
-import { Button, Panel } from "./ui";
+import { Button, Dialog, Panel } from "./ui";
 
 const emptyForm = (): Question => ({
   id: 0,
@@ -48,6 +48,8 @@ export function QuestionBankModal() {
 
   if (!state.bankOpen) return null;
 
+  const close = () => dispatch({ type: "TOGGLE_BANK" });
+
   const write = async (file: File) => {
     setBusy(true);
     setError(null);
@@ -88,11 +90,11 @@ export function QuestionBankModal() {
   };
 
   return (
-    <div className="scrim fixed inset-0 z-50 grid place-items-center p-3">
-      <Panel className="grid max-h-[92dvh] w-full max-w-6xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
+    <Dialog titleId="bank-title" onClose={close}>
+      <Panel className="grid max-h-[min(92dvh,52rem)] w-full max-w-6xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-ink p-4">
           <div>
-            <h2 className="text-xl font-black">بنك الأسئلة</h2>
+            <h2 id="bank-title" className="text-xl font-black">بنك الأسئلة</h2>
             <p className="text-xs text-muted">{bank.length} سؤالاً</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -117,7 +119,7 @@ export function QuestionBankModal() {
             <Button variant="ghost" onClick={restoreBundled}>
               استعادة البنك الأصلي
             </Button>
-            <button type="button" aria-label="إغلاق" onClick={() => dispatch({ type: "TOGGLE_BANK" })}>
+            <button type="button" aria-label="إغلاق" onClick={close}>
               <X />
             </button>
           </div>
@@ -274,7 +276,7 @@ export function QuestionBankModal() {
           </form>
         </div>
       </Panel>
-    </div>
+    </Dialog>
   );
 }
 

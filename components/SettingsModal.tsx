@@ -5,7 +5,7 @@ import { Settings2, Timer, Volume2, VolumeX, Palette, X } from "lucide-react";
 import { DEFAULT_HOST_SETTINGS } from "@/lib/types";
 import { useGame } from "./GameProvider";
 import { ThemePicker } from "./ThemePicker";
-import { Button, Panel } from "./ui";
+import { Button, Dialog, Panel } from "./ui";
 
 type Tab = "timers" | "theme" | "sound";
 
@@ -14,15 +14,17 @@ export function SettingsModal() {
   const [tab, setTab] = useState<Tab>("timers");
   if (!state.settingsOpen) return null;
 
+  const close = () => dispatch({ type: "TOGGLE_SETTINGS" });
+
   return (
-    <div className="scrim fixed inset-0 z-50 grid place-items-center p-3">
-      <Panel className="grid w-full max-w-xl overflow-hidden">
+    <Dialog titleId="settings-title" onClose={close}>
+      <Panel className="grid max-h-[min(92dvh,40rem)] w-full max-w-xl grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden">
         <header className="flex items-center justify-between gap-3 border-b-[3px] border-ink p-4">
           <div className="flex items-center gap-2">
             <Settings2 size={18} />
-            <h2 className="text-xl font-black">إعدادات المقدم</h2>
+            <h2 id="settings-title" className="text-xl font-black">إعدادات المقدم</h2>
           </div>
-          <button type="button" aria-label="إغلاق" onClick={() => dispatch({ type: "TOGGLE_SETTINGS" })}>
+          <button type="button" aria-label="إغلاق" onClick={close}>
             <X size={18} />
           </button>
         </header>
@@ -33,7 +35,7 @@ export function SettingsModal() {
           <TabButton active={tab === "sound"} onClick={() => setTab("sound")} icon={<Volume2 size={14} />} label="الصوت" />
         </div>
 
-        <div className="grid gap-4 p-4">
+        <div className="grid content-start gap-4 overflow-y-auto p-4">
           {tab === "timers" && (
             <>
               <p className="text-sm text-muted">تُطبَّق القيم على الأسئلة التالية في الوضع الكلاسيكي.</p>
@@ -109,7 +111,7 @@ export function SettingsModal() {
           )}
         </div>
       </Panel>
-    </div>
+    </Dialog>
   );
 }
 
