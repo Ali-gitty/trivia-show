@@ -1,12 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Settings2 } from "lucide-react";
+import { Settings2, Tv } from "lucide-react";
 import { isQuestionPhase } from "@/lib/gameReducer";
 import { useGame } from "./GameProvider";
+import { useTv } from "./TvBridge";
 
 export function Scoreboard() {
   const { dispatch, state } = useGame();
+  const { live, openLink, viewers } = useTv();
   const picking = state.phase === "board" ? state.teams[state.activeTeamIndex] : null;
 
   return (
@@ -44,6 +46,14 @@ export function Scoreboard() {
             </button>
           );
         })}
+        <button
+          type="button"
+          onClick={openLink}
+          className="board-btn board-btn-ghost px-3 py-3 text-sm"
+        >
+          <Tv size={18} />
+          {live ? (viewers > 0 ? "التلفاز متصل" : "بانتظار التلفاز") : "شاشة التلفاز"}
+        </button>
         <button
           type="button"
           onClick={() => dispatch({ type: "TOGGLE_HOST" })}

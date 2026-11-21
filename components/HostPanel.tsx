@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, RotateCcw, Settings2, Volume2, VolumeX, X } from "lucide-react";
+import { Eye, RotateCcw, Settings2, Tv, Volume2, VolumeX, X } from "lucide-react";
+import { useTv } from "./TvBridge";
 import { isQuestionPhase } from "@/lib/gameReducer";
 import type { PowerKind } from "@/lib/types";
 import { useGame } from "./GameProvider";
@@ -16,6 +17,7 @@ const powers: { kind: PowerKind; label: string }[] = [
 
 export function HostPanel() {
   const { dispatch, resetPlayed, state, toggleMute } = useGame();
+  const { live, openLink, viewers } = useTv();
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [names, setNames] = useState<Record<string, string>>({});
   if (!state.hostPanelOpen || state.phase === "lobby") return null;
@@ -41,6 +43,10 @@ export function HostPanel() {
         </Button>
         <Button variant="ghost" onClick={() => dispatch({ type: "TOGGLE_BANK" })}>
           بنك الأسئلة
+        </Button>
+        <Button variant="ghost" onClick={openLink}>
+          <Tv size={16} />
+          {live ? (viewers > 0 ? "التلفاز متصل" : "بانتظار التلفاز") : "شاشة التلفاز"}
         </Button>
         <Button variant="ghost" onClick={resetPlayed}>
           <RotateCcw size={16} />

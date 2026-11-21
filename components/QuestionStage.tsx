@@ -4,12 +4,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Eye, EyeOff, Pause, Play } from "lucide-react";
 import { isQuestionPhase, powerEligible, stealEligible } from "@/lib/gameReducer";
 import { useGame } from "./GameProvider";
+import { useTv } from "./TvBridge";
 import { BuzzerPad } from "./BuzzerPad";
 import { PowerUpBar } from "./PowerUpBar";
 import { Button } from "./ui";
 
 export function QuestionStage() {
   const { currentQuestion, dispatch, state, usePower } = useGame();
+  const { live: tvLive } = useTv();
   const open = isQuestionPhase(state.phase) && currentQuestion;
   const tile = state.board.find((item) => item.id === state.currentTileId);
   const total = state.phase === "steal" ? state.settings.stealSeconds : state.settings.primarySeconds;
@@ -93,7 +95,7 @@ export function QuestionStage() {
 
             {state.hostPeek && !state.answerRevealed && (
               <p className="mt-4 rounded-2xl border-[3px] border-dashed border-ink bg-paper px-4 py-3 text-sm">
-                معاينة خاصة غير ظاهرة للجمهور: {currentQuestion.answer}
+                {tvLive ? "ظاهرة على هذا الآيباد فقط" : "معاينة خاصة غير ظاهرة للجمهور"}: {currentQuestion.answer}
               </p>
             )}
 

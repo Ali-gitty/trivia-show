@@ -48,6 +48,11 @@ export class SoundEngine {
     osc.stop(start + duration + 0.02);
   }
 
+  unlock() {
+    const ctx = this.context();
+    if (ctx?.state === "suspended") void ctx.resume();
+  }
+
   play(name: SoundName) {
     if (this.muted) return;
     switch (name) {

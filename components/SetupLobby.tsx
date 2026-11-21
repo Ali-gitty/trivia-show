@@ -1,13 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen, RotateCcw, Settings2, Users, Volume2, VolumeX } from "lucide-react";
+import { BookOpen, RotateCcw, Settings2, Tv, Users, Volume2, VolumeX } from "lucide-react";
+import { useTv } from "./TvBridge";
 import { useGame } from "./GameProvider";
 import { Button, Panel } from "./ui";
 import { TEAM_COLORS, TEAM_NAMES, type GameMode } from "@/lib/types";
 
 export function SetupLobby() {
   const { categories, dispatch, playedIds, resetPlayed, startDraft, state, toggleMute } = useGame();
+  const { openLink } = useTv();
   const [mode, setMode] = useState<GameMode>("classic");
   const [count, setCount] = useState(3);
   const teamCount = mode === "classic" ? 2 : count;
@@ -49,6 +51,10 @@ export function SetupLobby() {
           <Button variant="ghost" onClick={() => dispatch({ type: "TOGGLE_BANK" })}>
             <BookOpen size={16} />
             بنك الأسئلة
+          </Button>
+          <Button variant="ghost" onClick={openLink}>
+            <Tv size={16} />
+            شاشة التلفاز
           </Button>
         </div>
       </header>

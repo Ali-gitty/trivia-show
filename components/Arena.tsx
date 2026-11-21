@@ -13,6 +13,7 @@ import { ScoreEditor } from "./ScoreEditor";
 import { Scoreboard } from "./Scoreboard";
 import { SettingsModal } from "./SettingsModal";
 import { SetupLobby } from "./SetupLobby";
+import { TvBridge } from "./TvBridge";
 
 export function Arena() {
   const { dispatch, ready, state } = useGame();
@@ -26,6 +27,7 @@ export function Arena() {
     isQuestionPhase(state.phase);
 
   return (
+    <TvBridge>
     <MotionConfig reducedMotion="user">
       {state.phase === "lobby" && <SetupLobby />}
       {state.phase === "draft" && <CategoryDraft />}
@@ -51,5 +53,6 @@ export function Arena() {
       <SettingsModal />
       <ScoreEditor />
     </MotionConfig>
+    </TvBridge>
   );
 }
