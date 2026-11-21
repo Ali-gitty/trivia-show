@@ -1,11 +1,13 @@
 export const SPEECH_SAMPLE = "مرحباً، هذه قراءة فعاليات البيت. يمكن تغيير السرعة من الإعدادات.";
 
+export const HOST_ASK_LINE =
+  "يحق للفريق سؤال المقدم مرة واحدة. على المقدم أن يجيب بصراحة.";
+
 export type SpeechPiece = {
   question: string;
-  hint: string;
   options: string[];
   answer: string;
-  hintVisible: boolean;
+  hostAskOpen: boolean;
   optionsVisible: boolean;
   answerRevealed: boolean;
 };
@@ -18,15 +20,15 @@ export function publicAnnouncement(input: SpeechPiece) {
     const list = input.options.map((option, index) => `${index + 1}. ${option}`).join("، ");
     return { key: "options", text: `الخيارات. ${list}` };
   }
-  if (input.hintVisible && input.hint.trim()) {
-    return { key: "hint", text: `تلميح. ${input.hint.trim()}` };
+  if (input.hostAskOpen) {
+    return { key: "ask", text: HOST_ASK_LINE };
   }
   return { key: "question", text: input.question.trim() };
 }
 
 export function visibleReading(input: SpeechPiece) {
   const parts = [input.question.trim()];
-  if (input.hintVisible && input.hint.trim()) parts.push(`تلميح. ${input.hint.trim()}`);
+  if (input.hostAskOpen) parts.push(HOST_ASK_LINE);
   if (input.optionsVisible && input.options.length) {
     parts.push(`الخيارات. ${input.options.map((option, index) => `${index + 1}. ${option}`).join("، ")}`);
   }

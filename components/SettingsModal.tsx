@@ -117,7 +117,7 @@ export function SettingsModal() {
               <div className="grid gap-3 rounded-2xl border-[3px] border-ink bg-paper p-3">
                 <p className="text-sm font-black">قراءة عربية للجميع</p>
                 <p className="text-sm text-muted">
-                  تقرأ السؤال، ثم التلميح والخيارات والإجابة عندما تظهر للجميع. معاينة المقدم لا تُقرأ.
+                  تقرأ السؤال، ثم سؤال المقدم والخيارات والإجابة عندما تظهر للجميع. معاينة المقدم لا تُقرأ.
                 </p>
                 <Button
                   disabled={!canSpeak}

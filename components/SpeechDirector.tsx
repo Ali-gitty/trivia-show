@@ -24,10 +24,9 @@ export function SpeechDirector() {
     }
     const piece = publicAnnouncement({
       question: currentQuestion.question,
-      hint: currentQuestion.hint,
       options: state.optionsOrder,
       answer: currentQuestion.answer,
-      hintVisible: state.hintVisible,
+      hostAskOpen: state.hostAskOpen,
       optionsVisible: state.optionsVisible,
       answerRevealed: state.answerRevealed,
     });
@@ -38,7 +37,7 @@ export function SpeechDirector() {
   }, [
     currentQuestion,
     state.answerRevealed,
-    state.hintVisible,
+    state.hostAskOpen,
     state.optionsOrder,
     state.optionsVisible,
     state.phase,

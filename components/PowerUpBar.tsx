@@ -1,12 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Lightbulb, ListChecks, SkipForward } from "lucide-react";
-import type { Team } from "@/lib/types";
+import { ListChecks, MessageCircleQuestion, SkipForward } from "lucide-react";
+import type { Team, TeamPowerKind } from "@/lib/types";
 import { cooldownLabel } from "./ui";
 
 const kinds = [
-  { kind: "hint" as const, label: "تلميح للجميع", icon: Lightbulb },
+  { kind: "ask" as const, label: "اسأل المقدم", icon: MessageCircleQuestion },
   { kind: "choice" as const, label: "خيارات متعددة", icon: ListChecks },
   { kind: "skip" as const, label: "تخطي السؤال", icon: SkipForward },
 ];
@@ -14,15 +14,15 @@ const kinds = [
 export function PowerUpBar({
   teams,
   eligible,
-  hintVisible,
+  hostAskOpen,
   optionsVisible,
   onUse,
 }: {
   teams: Team[];
   eligible: number[];
-  hintVisible: boolean;
+  hostAskOpen: boolean;
   optionsVisible: boolean;
-  onUse: (teamIndex: number, kind: "hint" | "choice" | "skip") => void;
+  onUse: (teamIndex: number, kind: TeamPowerKind) => void;
 }) {
   if (!eligible.length) return null;
   return (
@@ -39,7 +39,7 @@ export function PowerUpBar({
               {kinds.map((item) => {
                 const turns = team.cooldowns[item.kind];
                 const used =
-                  (item.kind === "hint" && hintVisible) || (item.kind === "choice" && optionsVisible);
+                  (item.kind === "ask" && hostAskOpen) || (item.kind === "choice" && optionsVisible);
                 const disabled = turns > 0 || used;
                 const Icon = item.icon;
                 return (
@@ -60,7 +60,7 @@ export function PowerUpBar({
                       animate={{ scale: 1, opacity: 1 }}
                       className="chip chip-accent shrink-0 px-2 py-0.5 text-[10px]"
                     >
-                      {used && turns <= 0 ? "ظاهر" : cooldownLabel(turns)}
+                      {used && turns <= 0 ? "مفعّل" : cooldownLabel(turns)}
                     </motion.span>
                   </button>
                 );

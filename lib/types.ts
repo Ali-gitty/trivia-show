@@ -75,7 +75,10 @@ export type Phase =
   | "resolved"
   | "podium";
 
-export type PowerKind = "hint" | "choice" | "skip" | "steal";
+export type PowerKind = "ask" | "choice" | "skip" | "steal";
+
+export const TEAM_POWER_KINDS = ["ask", "choice", "skip"] as const;
+export type TeamPowerKind = (typeof TEAM_POWER_KINDS)[number];
 
 export type SoundName =
   | "tile"
@@ -166,7 +169,7 @@ export type GameState = {
   timerPaused: boolean;
   buzzingTeamIndex: number | null;
   lockedOutTeamIds: string[];
-  hintVisible: boolean;
+  hostAskOpen: boolean;
   optionsVisible: boolean;
   optionsOrder: string[];
   answerRevealed: boolean;
@@ -189,7 +192,20 @@ export function isPoints(value: number): value is Points {
 }
 
 export function freshCooldowns(): Cooldowns {
-  return { hint: 0, choice: 0, skip: 0, steal: 0 };
+  return { ask: 0, choice: 0, skip: 0, steal: 0 };
+}
+
+export function normalizeCooldowns(input: Partial<Record<string, number>> | null | undefined): Cooldowns {
+  const ask = Number(input?.ask ?? input?.hint ?? 0);
+  const choice = Number(input?.choice ?? 0);
+  const skip = Number(input?.skip ?? 0);
+  const steal = Number(input?.steal ?? 0);
+  return {
+    ask: Number.isFinite(ask) ? Math.max(0, Math.round(ask)) : 0,
+    choice: Number.isFinite(choice) ? Math.max(0, Math.round(choice)) : 0,
+    skip: Number.isFinite(skip) ? Math.max(0, Math.round(skip)) : 0,
+    steal: Number.isFinite(steal) ? Math.max(0, Math.round(steal)) : 0,
+  };
 }
 
 export function clampScore(value: number) {

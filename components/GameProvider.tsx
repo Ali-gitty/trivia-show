@@ -29,7 +29,15 @@ import {
 } from "@/lib/gameReducer";
 import { mergeQuestions, toQuestion } from "@/lib/parsePack";
 import { SoundEngine } from "@/lib/sounds";
-import { normalizeHostSettings, type GameMode, type GameState, type PowerKind, type Question } from "@/lib/types";
+import {
+  normalizeCooldowns,
+  normalizeHostSettings,
+  type GameMode,
+  type GameState,
+  type PowerKind,
+  type Question,
+  type TeamPowerKind,
+} from "@/lib/types";
 
 type GameApi = {
   state: GameState;
@@ -43,7 +51,7 @@ type GameApi = {
   pickCategory: (category: string) => void;
   finishDraft: () => void;
   openTile: (tileId: string) => void;
-  usePower: (teamIndex: number, kind: "hint" | "choice" | "skip") => void;
+  usePower: (teamIndex: number, kind: TeamPowerKind) => void;
   toggleMute: () => void;
   resetPlayed: () => void;
   saveQuestion: (draft: Question, isNew: boolean) => string | null;
@@ -59,12 +67,26 @@ function sanitize(input: GameState): GameState {
   return {
     ...base,
     ...input,
-    teams: Array.isArray(input.teams) ? input.teams : [],
+    teams: Array.isArray(input.teams)
+      ? input.teams.map((team) => ({
+          ...team,
+          cooldowns: normalizeCooldowns(team.cooldowns),
+        }))
+      : [],
     board: Array.isArray(input.board) ? input.board : [],
     draftPicks: Array.isArray(input.draftPicks) ? input.draftPicks : [],
     lockedOutTeamIds: Array.isArray(input.lockedOutTeamIds) ? input.lockedOutTeamIds : [],
-    usedThisQuestion: Array.isArray(input.usedThisQuestion) ? input.usedThisQuestion : [],
+    usedThisQuestion: Array.isArray(input.usedThisQuestion)
+      ? input.usedThisQuestion.map((use) => {
+          const kind = String((use as { kind?: string }).kind) === "hint" ? "ask" : use.kind;
+          return { ...use, kind };
+        })
+      : [],
     optionsOrder: Array.isArray(input.optionsOrder) ? input.optionsOrder : [],
+    hostAskOpen: Boolean(
+      (input as GameState & { hintVisible?: boolean }).hostAskOpen ||
+        (input as GameState & { hintVisible?: boolean }).hintVisible,
+    ),
     settings: normalizeHostSettings(input.settings),
     pointMultiplier:
       Number.isInteger(Number(input.pointMultiplier)) && Number(input.pointMultiplier) >= 1
@@ -230,7 +252,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "OPEN_TILE", tileId, questions: bank });
   }, [bank]);
 
-  const usePower = useCallback((teamIndex: number, kind: "hint" | "choice" | "skip") => {
+  const usePower = useCallback((teamIndex: number, kind: TeamPowerKind) => {
     const tile = state.board.find((item) => item.id === state.currentTileId);
     const question = tile ? bank.find((item) => item.id === tile.questionId) : undefined;
     dispatch({

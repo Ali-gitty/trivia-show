@@ -54,13 +54,18 @@ if (state.activeTeamIndex !== 1) throw new Error("turn did not alternate");
 
 state = gameReducer(state, { type: "OPEN_TILE", tileId: state.board.find((item) => item.status === "open")!.id, questions });
 const actor = powerEligible(state)[0];
-state = gameReducer(state, { type: "USE_POWER", teamIndex: actor, kind: "hint" });
-if (!state.hintVisible || state.teams[actor].cooldowns.hint !== 3) throw new Error("hint cooldown");
+state = gameReducer(state, { type: "USE_POWER", teamIndex: actor, kind: "ask" });
+if (!state.hostAskOpen || state.teams[actor].cooldowns.ask !== 3) throw new Error("ask cooldown");
 state = gameReducer(state, { type: "LOCK" });
 state = gameReducer(state, { type: "LOCK" });
 state = gameReducer(state, { type: "REVEAL" });
 state = gameReducer(state, { type: "AWARD", teamIndex: null });
-if (state.teams[actor].cooldowns.hint !== 3) throw new Error("hint decayed on the same question");
+if (state.teams[actor].cooldowns.ask !== 3) throw new Error("ask decayed on the same question");
+
+state = gameReducer(state, { type: "OPEN_TILE", tileId: state.board.find((item) => item.status === "open")!.id, questions });
+const skipper = powerEligible(state)[0];
+state = gameReducer(state, { type: "USE_POWER", teamIndex: skipper, kind: "skip" });
+if (state.phase !== "board" || state.teams[skipper].cooldowns.skip !== 10) throw new Error("skip cooldown");
 
 let multi = gameReducer(createInitialState(), {
   type: "START_DRAFT",
@@ -111,20 +116,29 @@ if (blown.teams[1].score !== before + 1000) throw new Error("doubled award");
 
 const quiet = publicAnnouncement({
   question: "ما السؤال؟",
-  hint: "تلميح سري",
   options: ["أ", "ب"],
   answer: "الإجابة السرية",
-  hintVisible: false,
+  hostAskOpen: false,
   optionsVisible: false,
   answerRevealed: false,
 });
 if (quiet.text.includes("السرية") || quiet.key !== "question") throw new Error("speech leaked the answer");
-const aloud = publicAnnouncement({
+const askLine = publicAnnouncement({
   question: "ما السؤال؟",
-  hint: "تلميح",
   options: [],
   answer: "الإجابة السرية",
-  hintVisible: false,
+  hostAskOpen: true,
+  optionsVisible: false,
+  answerRevealed: false,
+});
+if (askLine.key !== "ask" || !askLine.text.includes("بصراحة") || askLine.text.includes("السرية")) {
+  throw new Error("host ask speech");
+}
+const aloud = publicAnnouncement({
+  question: "ما السؤال؟",
+  options: [],
+  answer: "الإجابة السرية",
+  hostAskOpen: false,
   optionsVisible: false,
   answerRevealed: true,
 });

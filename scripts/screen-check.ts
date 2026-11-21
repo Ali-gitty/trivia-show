@@ -21,8 +21,8 @@ state = {
   ...state,
   phase: "primary",
   teams: [
-    { id: "a", name: "الأول", color: "#22d3ee", score: 0, cooldowns: { hint: 0, choice: 0, skip: 0, steal: 0 } },
-    { id: "b", name: "الثاني", color: "#fb923c", score: 0, cooldowns: { hint: 0, choice: 0, skip: 0, steal: 0 } },
+    { id: "a", name: "الأول", color: "#22d3ee", score: 0, cooldowns: { ask: 0, choice: 0, skip: 0, steal: 0 } },
+    { id: "b", name: "الثاني", color: "#fb923c", score: 0, cooldowns: { ask: 0, choice: 0, skip: 0, steal: 0 } },
   ],
   board: [
     {
@@ -48,18 +48,26 @@ if (raw.includes(secret) || raw.includes(hint) || raw.includes("hostPeek")) {
 if (hidden.question?.prompt !== question.question || hidden.question.answer !== null || hidden.pattern !== "dots") {
   throw new Error("public prompt missing");
 }
+if (hidden.question?.hostAsk) throw new Error("host ask leaked before use");
 const waved = buildSnapshot(state, question, "kraft", "waves");
 if (waved.pattern !== "waves") throw new Error("pattern was dropped");
 
-state = { ...state, hintVisible: true, optionsVisible: true, optionsOrder: [...question.options], answerRevealed: true };
+state = {
+  ...state,
+  hostAskOpen: true,
+  optionsVisible: true,
+  optionsOrder: [...question.options],
+  answerRevealed: true,
+};
 const shown = buildSnapshot(state, question, "tide");
-if (shown.question?.answer !== secret || shown.question.hint !== hint || shown.palette !== "tide") {
+if (shown.question?.answer !== secret || !shown.question.hostAsk || shown.palette !== "tide") {
   throw new Error("reveal did not publish the public fields");
 }
+if (JSON.stringify(shown).includes(hint)) throw new Error("written hint leaked to the TV");
 if (JSON.stringify(shown).includes("hostPeek")) throw new Error("peek flag leaked");
 
 const activity = buildSnapshot(
-  { ...state, answerRevealed: false, hintVisible: false, optionsVisible: false },
+  { ...state, answerRevealed: false, hostAskOpen: false, optionsVisible: false },
   { ...question, kind: "activity", answer: "معيار سري" },
   "nope",
 );

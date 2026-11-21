@@ -9,7 +9,7 @@ import { useGame } from "./GameProvider";
 import { Button } from "./ui";
 
 const powers: { kind: PowerKind; label: string }[] = [
-  { kind: "hint", label: "تلميح" },
+  { kind: "ask", label: "سؤال المقدم" },
   { kind: "choice", label: "خيارات" },
   { kind: "skip", label: "تخطي" },
   { kind: "steal", label: "سرقة" },

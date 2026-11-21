@@ -84,10 +84,9 @@ export function QuestionStage() {
                       speakArabic(
                         visibleReading({
                           question: currentQuestion.question,
-                          hint: currentQuestion.hint,
                           options: state.optionsOrder,
                           answer: currentQuestion.answer,
-                          hintVisible: state.hintVisible,
+                          hostAskOpen: state.hostAskOpen,
                           optionsVisible: state.optionsVisible,
                           answerRevealed: state.answerRevealed,
                         }),
@@ -108,9 +107,9 @@ export function QuestionStage() {
 
             <h2 className="text-3xl font-black leading-relaxed sm:text-4xl">{currentQuestion.question}</h2>
 
-            {state.hintVisible && (
-              <p className="note-ok mt-4 px-4 py-3">
-                تلميح للجميع: {currentQuestion.hint}
+            {state.hostAskOpen && (
+              <p className="note-ok mt-4 px-4 py-3 font-bold">
+                يحق للفريق سؤال المقدم مرة واحدة. على المقدم أن يجيب بصراحة.
               </p>
             )}
 
@@ -139,7 +138,7 @@ export function QuestionStage() {
               <PowerUpBar
                 teams={state.teams}
                 eligible={powerEligible(state)}
-                hintVisible={state.hintVisible}
+                hostAskOpen={state.hostAskOpen}
                 optionsVisible={state.optionsVisible}
                 onUse={usePower}
               />
