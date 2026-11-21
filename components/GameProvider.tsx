@@ -66,6 +66,10 @@ function sanitize(input: GameState): GameState {
     usedThisQuestion: Array.isArray(input.usedThisQuestion) ? input.usedThisQuestion : [],
     optionsOrder: Array.isArray(input.optionsOrder) ? input.optionsOrder : [],
     settings: normalizeHostSettings(input.settings),
+    pointMultiplier:
+      Number.isInteger(Number(input.pointMultiplier)) && Number(input.pointMultiplier) >= 1
+        ? Number(input.pointMultiplier)
+        : 1,
     settingsOpen: false,
     cue: input.cue ?? base.cue,
   };

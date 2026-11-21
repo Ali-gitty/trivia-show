@@ -1,4 +1,4 @@
-import { draftPlan, isQuestionPhase } from "./gameReducer";
+import { draftPlan, facePoints, isQuestionPhase } from "./gameReducer";
 import { PALETTES, type PaletteId } from "./theme";
 import type { GameState, Outcome, Phase, Question, SoundName } from "./types";
 
@@ -45,6 +45,7 @@ export type ScreenSnapshot = {
   outcome: Outcome | null;
   cue: { id: number; name: SoundName | null };
   question: ScreenQuestion | null;
+  pointMultiplier: number;
 };
 
 const paletteIds = new Set<string>(PALETTES.map((palette) => palette.id));
@@ -90,6 +91,7 @@ export function buildSnapshot(
     notice: state.notice,
     outcome: state.outcome ? { ...state.outcome } : null,
     cue: { id: state.cue.id, name: state.cue.name },
+    pointMultiplier: facePoints(1, state.pointMultiplier),
     question: showQuestion
       ? {
           category: question.category,

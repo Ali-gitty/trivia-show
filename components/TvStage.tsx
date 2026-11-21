@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Check, Minus, Volume2 } from "lucide-react";
 import { POINT_VALUES } from "@/lib/types";
-import { isQuestionPhase } from "@/lib/gameReducer";
+import { facePoints, isQuestionPhase, unreachableLead } from "@/lib/gameReducer";
 import { openScreenLink, readRoomParam, viewerId } from "@/lib/screenChannel";
 import type { ScreenSnapshot } from "@/lib/screenSnapshot";
 import { SoundEngine } from "@/lib/sounds";
@@ -148,6 +148,7 @@ function MatchView({ snap }: { snap: ScreenSnapshot }) {
   return (
     <div className={asking ? "opacity-100" : undefined}>
       <ScoreStrip snap={snap} />
+      <LeadBanner snap={snap} />
       <div className={`mx-auto max-w-7xl px-3 py-5 ${asking ? "pointer-events-none opacity-30" : ""}`}>
         <div className="overflow-x-auto pb-2">
           <div
@@ -169,7 +170,14 @@ function MatchView({ snap }: { snap: ScreenSnapshot }) {
                         tile.status === "open" ? "tile-face" : "tile-spent"
                       }`}
                     >
-                      {tile.status === "open" && <span className="text-2xl">{tile.points}</span>}
+                      {tile.status === "open" && (
+                        <span className="text-2xl leading-none">
+                          {facePoints(tile.points, snap.pointMultiplier)}
+                          {snap.pointMultiplier > 1 && (
+                            <span className="mt-1 block text-[10px] font-bold">×{snap.pointMultiplier}</span>
+                          )}
+                        </span>
+                      )}
                       {tile.status === "played" && <Check aria-label="تم اللعب" />}
                       {tile.status === "skipped" && <Minus aria-label="تم التخطي" />}
                     </div>
@@ -182,6 +190,16 @@ function MatchView({ snap }: { snap: ScreenSnapshot }) {
       </div>
       {asking && snap.question && <QuestionCard snap={snap} />}
     </div>
+  );
+}
+
+function LeadBanner({ snap }: { snap: ScreenSnapshot }) {
+  const lead = unreachableLead(snap);
+  if (!lead || snap.phase !== "board") return null;
+  return (
+    <p className="note-danger mx-auto mt-3 max-w-3xl px-4 py-3 text-center text-sm font-black">
+      تقدم {lead.leaderName} لا يُغلق بالمتبقي. القرار عند المقدم على الآيباد: مضاعفة النقاط أو إنهاء المباراة.
+    </p>
   );
 }
 
@@ -231,7 +249,7 @@ function QuestionCard({ snap }: { snap: ScreenSnapshot }) {
       <section className="board-card max-h-[92dvh] w-full max-w-5xl overflow-y-auto p-5 sm:p-8">
         <div className="mb-4 flex flex-wrap gap-2 text-sm">
           <span className="chip chip-accent px-3 py-1">{question.category}</span>
-          <span className="chip px-3 py-1">{question.points}</span>
+          <span className="chip px-3 py-1">{facePoints(question.points, snap.pointMultiplier)}</span>
           {question.activity && <span className="chip px-3 py-1">فعالية</span>}
           {actor && <span className="chip px-3 py-1">{actor.name}</span>}
           {snap.phase === "buzzOpen" && <span className="chip px-3 py-1">الجرس مفتوح</span>}

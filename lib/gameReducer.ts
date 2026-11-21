@@ -54,6 +54,7 @@ export type Action =
   | { type: "RENAME_TEAM"; teamId: string; name: string }
   | { type: "RESET_COOLDOWN"; teamId: string; kind: PowerKind }
   | { type: "END_MATCH" }
+  | { type: "DOUBLE_REMAINING" }
   | { type: "REPLAY" };
 
 export function createInitialState(): GameState {
@@ -86,6 +87,7 @@ export function createInitialState(): GameState {
     cue: { id: 0, name: null },
     outcome: null,
     notice: null,
+    pointMultiplier: 1,
   };
 }
 
@@ -251,8 +253,44 @@ function livePower(state: GameState, teamIndex: number, kind: "hint" | "choice" 
   return !state.lockedOutTeamIds.includes(team.id);
 }
 
+export function facePoints(base: number, multiplier: number) {
+  const scale = Number.isInteger(multiplier) && multiplier > 0 ? multiplier : 1;
+  return base * scale;
+}
+
+const MAX_POINT_MULTIPLIER = 32;
+
+export function unreachableLead(state: {
+  phase: Phase;
+  teams: { id: string; name: string; color: string; score: number }[];
+  board: { points: number; status: "open" | "played" | "skipped" }[];
+  pointMultiplier: number;
+}) {
+  if (state.phase === "lobby" || state.phase === "draft" || state.phase === "podium") return null;
+  if (state.teams.length < 2) return null;
+  const ranked = [...state.teams].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, "ar"));
+  const leader = ranked[0];
+  const challenger = ranked[1];
+  if (!leader || !challenger) return null;
+  const gap = leader.score - challenger.score;
+  const multiplier = facePoints(1, state.pointMultiplier);
+  const remaining = state.board
+    .filter((tile) => tile.status === "open")
+    .reduce((sum, tile) => sum + facePoints(tile.points, multiplier), 0);
+  if (remaining <= 0 || gap <= remaining) return null;
+  return {
+    leaderName: leader.name,
+    leaderColor: leader.color,
+    challengerName: challenger.name,
+    gap,
+    remaining,
+    multiplier,
+  };
+}
+
 function currentPoints(state: GameState) {
-  return state.board.find((tile) => tile.id === state.currentTileId)?.points ?? 0;
+  const base = state.board.find((tile) => tile.id === state.currentTileId)?.points ?? 0;
+  return facePoints(base, state.pointMultiplier);
 }
 
 export function gameReducer(state: GameState, action: Action): GameState {
@@ -567,6 +605,17 @@ export function gameReducer(state: GameState, action: Action): GameState {
             : team,
         ),
       };
+    case "DOUBLE_REMAINING": {
+      const lead = unreachableLead(state);
+      if (!lead || state.pointMultiplier >= MAX_POINT_MULTIPLIER) return state;
+      const pointMultiplier = state.pointMultiplier * 2;
+      return {
+        ...state,
+        pointMultiplier,
+        notice: `نقاط الأسئلة المتبقية أصبحت ×${pointMultiplier}`,
+        cue: sound(state, "power"),
+      };
+    }
     case "END_MATCH":
       if (state.phase === "lobby" || state.phase === "podium") return state;
       return {

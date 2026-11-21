@@ -169,6 +169,7 @@ export type GameState = {
   cue: Cue;
   outcome: Outcome | null;
   notice: string | null;
+  pointMultiplier: number;
 };
 
 export function isPoints(value: number): value is Points {

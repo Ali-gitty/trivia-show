@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, EyeOff, Pause, Play } from "lucide-react";
-import { isQuestionPhase, powerEligible, stealEligible } from "@/lib/gameReducer";
+import { facePoints, isQuestionPhase, powerEligible, stealEligible } from "@/lib/gameReducer";
 import { useGame } from "./GameProvider";
 import { useTv } from "./TvBridge";
 import { BuzzerPad } from "./BuzzerPad";
@@ -14,6 +14,7 @@ export function QuestionStage() {
   const { live: tvLive } = useTv();
   const open = isQuestionPhase(state.phase) && currentQuestion;
   const tile = state.board.find((item) => item.id === state.currentTileId);
+  const worth = facePoints(tile?.points ?? 0, state.pointMultiplier);
   const total = state.phase === "steal" ? state.settings.stealSeconds : state.settings.primarySeconds;
   const actor =
     state.phase === "primary"
@@ -46,7 +47,7 @@ export function QuestionStage() {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap gap-2 text-sm">
                 <span className="chip chip-accent px-3 py-1">{tile.category}</span>
-                <span className="chip px-3 py-1">{tile.points}</span>
+                <span className="chip px-3 py-1">{worth}</span>
                 {actor && <span className="chip px-3 py-1">يجيب: {actor.name}</span>}
               </div>
               <Button variant="ghost" onClick={() => dispatch({ type: "TOGGLE_PEEK" })}>
@@ -138,7 +139,7 @@ export function QuestionStage() {
               <div className="mt-5 grid gap-2 sm:grid-cols-3">
                 {state.teams.slice(0, 2).map((team, index) => (
                   <Button key={team.id} onClick={() => dispatch({ type: "AWARD", teamIndex: index })}>
-                    نقاط لـ {team.name} (+{tile.points})
+                    نقاط لـ {team.name} (+{worth})
                   </Button>
                 ))}
                 <Button variant="danger" onClick={() => dispatch({ type: "AWARD", teamIndex: null })}>
@@ -161,9 +162,9 @@ export function QuestionStage() {
                 />
                 {state.phase === "buzzLocked" && state.buzzingTeamIndex != null && (
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <Button onClick={() => dispatch({ type: "BUZZ_CORRECT" })}>إجابة صحيحة (+{tile.points})</Button>
+                    <Button onClick={() => dispatch({ type: "BUZZ_CORRECT" })}>إجابة صحيحة (+{worth})</Button>
                     <Button variant="danger" onClick={() => dispatch({ type: "BUZZ_WRONG" })}>
-                      إجابة خاطئة (−{tile.points / 2})
+                      إجابة خاطئة (−{worth / 2})
                     </Button>
                   </div>
                 )}

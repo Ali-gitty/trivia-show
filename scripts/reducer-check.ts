@@ -1,4 +1,4 @@
-import { gameReducer, createInitialState, powerEligible } from "../lib/gameReducer";
+import { gameReducer, createInitialState, powerEligible, unreachableLead } from "../lib/gameReducer";
 import type { Question } from "../lib/types";
 
 function question(id: number, category: string, points: Question["points"]): Question {
@@ -85,5 +85,25 @@ if (!multi.lockedOutTeamIds.includes("team-2") || multi.phase !== "buzzOpen") th
 multi = gameReducer(multi, { type: "BUZZ", teamIndex: 2 });
 multi = gameReducer(multi, { type: "BUZZ_CORRECT" });
 if (multi.teams[2].score !== 500 || multi.phase !== "resolved") throw new Error("correct");
+
+let blown = {
+  ...state,
+  teams: state.teams.map((team, index) => (index === 0 ? { ...team, score: 20000 } : team)),
+};
+const lead = unreachableLead(blown);
+if (!lead || lead.gap <= lead.remaining) throw new Error("lead should be out of reach");
+blown = gameReducer(blown, { type: "DOUBLE_REMAINING" });
+if (blown.pointMultiplier !== 2) throw new Error("double remaining");
+const still = unreachableLead(blown);
+if (!still) throw new Error("one double is not enough for this gap");
+const doubledTile = blown.board.find((item) => item.status === "open" && item.points === 500);
+if (!doubledTile) throw new Error("missing open tile");
+blown = gameReducer(blown, { type: "OPEN_TILE", tileId: doubledTile.id, questions });
+blown = gameReducer(blown, { type: "LOCK" });
+blown = gameReducer(blown, { type: "LOCK" });
+blown = gameReducer(blown, { type: "REVEAL" });
+const before = blown.teams[1].score;
+blown = gameReducer(blown, { type: "AWARD", teamIndex: 1 });
+if (blown.teams[1].score !== before + 1000) throw new Error("doubled award");
 
 console.log("reducer checks passed");

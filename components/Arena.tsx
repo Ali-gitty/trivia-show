@@ -5,7 +5,7 @@ import { isQuestionPhase } from "@/lib/gameReducer";
 import { CategoryDraft } from "./CategoryDraft";
 import { GameBoard } from "./GameBoard";
 import { useGame } from "./GameProvider";
-import { HostPanel } from "./HostPanel";
+import { HostPanel, hostDock } from "./HostPanel";
 import { Podium } from "./Podium";
 import { QuestionBankModal } from "./QuestionBankModal";
 import { QuestionStage } from "./QuestionStage";
@@ -13,6 +13,7 @@ import { ScoreEditor } from "./ScoreEditor";
 import { Scoreboard } from "./Scoreboard";
 import { SettingsModal } from "./SettingsModal";
 import { SetupLobby } from "./SetupLobby";
+import { LeadNotice } from "./LeadNotice";
 import { TvBridge } from "./TvBridge";
 
 export function Arena() {
@@ -43,7 +44,8 @@ export function Arena() {
         <button
           type="button"
           onClick={() => dispatch({ type: "TOGGLE_HOST" })}
-          className="board-btn board-btn-accent fixed bottom-4 left-4 z-40 px-4 py-2 text-sm"
+          className="board-btn board-btn-accent fixed z-40 px-4 py-2 text-sm"
+          style={hostDock}
         >
           لوحة المقدم
         </button>
@@ -52,6 +54,7 @@ export function Arena() {
       <QuestionBankModal />
       <SettingsModal />
       <ScoreEditor />
+      <LeadNotice />
     </MotionConfig>
     </TvBridge>
   );

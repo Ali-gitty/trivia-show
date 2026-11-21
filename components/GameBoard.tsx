@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Check, Minus } from "lucide-react";
+import { facePoints } from "@/lib/gameReducer";
 import { POINT_VALUES } from "@/lib/types";
 import { useGame } from "./GameProvider";
 
@@ -31,6 +32,7 @@ export function GameBoard({ dimmed }: { dimmed: boolean }) {
                 const tile = state.board.find((item) => item.category === category && item.points === points);
                 if (!tile) return <div key={points} className="tile-spent min-h-20" />;
                 const open = tile.status === "open" && state.phase === "board";
+                const worth = facePoints(tile.points, state.pointMultiplier);
                 return (
                   <motion.button
                     key={tile.id}
@@ -46,7 +48,14 @@ export function GameBoard({ dimmed }: { dimmed: boolean }) {
                       tile.status === "open" ? "tile-face" : "tile-spent"
                     }`}
                   >
-                    {tile.status === "open" && <span className="text-2xl">{tile.points}</span>}
+                    {tile.status === "open" && (
+                      <span className="text-2xl leading-none">
+                        {worth}
+                        {state.pointMultiplier > 1 && (
+                          <span className="mt-1 block text-[10px] font-bold">×{state.pointMultiplier}</span>
+                        )}
+                      </span>
+                    )}
                     {tile.status === "played" && <Check aria-label="تم اللعب" />}
                     {tile.status === "skipped" && <Minus aria-label="تم التخطي" />}
                     {tile.reused && tile.status === "open" && (
