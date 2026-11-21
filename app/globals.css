@@ -150,9 +150,13 @@ body::after {
   }
 }
 
-body > * {
-  position: relative;
-  z-index: 1;
+/* Unlayered rules beat Tailwind utilities. Keep this lift in the base
+   layer so .fixed and z-index classes can still paint overlays. */
+@layer base {
+  body > * {
+    position: relative;
+    z-index: 1;
+  }
 }
 
 button,
@@ -339,7 +343,17 @@ input[type="range"] {
 }
 
 .scrim {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 0.75rem;
   background: color-mix(in srgb, var(--ink) 46%, transparent);
+}
+
+.popup-window {
+  z-index: 90;
 }
 
 .answer-banner {
