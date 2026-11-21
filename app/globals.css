@@ -93,6 +93,22 @@
   color-scheme: light;
 }
 
+[data-palette="ash"] {
+  --paper: #121212;
+  --card: #1e1e1c;
+  --ink: #f4f1ea;
+  --muted: #a8a297;
+  --accent: #d9d4c8;
+  --accent-ink: #141414;
+  --accent-wash: rgba(255, 255, 255, 0.07);
+  --danger: #3a2a28;
+  --danger-ink: #ffd0c4;
+  --chip: #2a2a28;
+  --shadow: #000000;
+  --dot: rgba(244, 241, 234, 0.14);
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   color: var(--ink);
@@ -404,7 +420,7 @@ input[type="range"] {
   place-items: center;
   overflow: auto;
   padding: 0.75rem;
-  background: color-mix(in srgb, var(--ink) 46%, transparent);
+  background: color-mix(in srgb, var(--shadow) 62%, transparent);
 }
 
 .popup-window {

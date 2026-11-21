@@ -7,6 +7,7 @@ import { facePoints, isQuestionPhase, unreachableLead } from "@/lib/gameReducer"
 import { openScreenLink, readRoomParam, viewerId } from "@/lib/screenChannel";
 import type { ScreenSnapshot } from "@/lib/screenSnapshot";
 import { SoundEngine } from "@/lib/sounds";
+import { ChoiceGrid } from "./ChoiceGrid";
 import { Button } from "./ui";
 
 function subscribeNothing() {
@@ -266,16 +267,7 @@ function QuestionCard({ snap }: { snap: ScreenSnapshot }) {
         )}
         <h2 className="text-3xl font-black leading-relaxed sm:text-5xl">{question.prompt}</h2>
         {question.hint && <p className="note-ok mt-4 px-4 py-3">تلميح للجميع: {question.hint}</p>}
-        {question.options && (
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {question.options.map((option, index) => (
-              <div key={option} className="board-card px-4 py-3 shadow-[3px_3px_0_var(--shadow)]">
-                <span className="ml-2 font-black text-accent">{index + 1}.</span>
-                {option}
-              </div>
-            ))}
-          </div>
-        )}
+        {question.options && <ChoiceGrid options={question.options} />}
         {question.answer ? (
           <p className="answer-banner mt-4 px-4 py-3 text-2xl font-black">
             {question.activity ? "معيار التحكيم" : "الإجابة"}: {question.answer}

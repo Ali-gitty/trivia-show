@@ -1,4 +1,5 @@
 import { gameReducer, createInitialState, powerEligible, unreachableLead } from "../lib/gameReducer";
+import { optionDirection } from "../lib/direction";
 import { publicAnnouncement } from "../lib/speech";
 import { normalizeHostSettings } from "../lib/types";
 import type { Question } from "../lib/types";
@@ -130,5 +131,7 @@ const aloud = publicAnnouncement({
 if (!aloud.text.includes("الإجابة السرية")) throw new Error("speech skipped the revealed answer");
 const kept = normalizeHostSettings({ primarySeconds: 40, speech: true, speechRate: 1.1 });
 if (!kept.speech || kept.speechRate !== 1.1 || kept.primarySeconds !== 40) throw new Error("settings dropped speech");
+if (optionDirection("4, 8, 15, 16, 23, 42") !== "ltr") throw new Error("numbers should stay left to right");
+if (optionDirection("الحضارة السومرية") !== "rtl") throw new Error("arabic choices should stay right to left");
 
 console.log("reducer checks passed");

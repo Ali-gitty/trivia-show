@@ -7,6 +7,7 @@ import { facePoints, isQuestionPhase, powerEligible, stealEligible } from "@/lib
 import { useGame } from "./GameProvider";
 import { useTv } from "./TvBridge";
 import { BuzzerPad } from "./BuzzerPad";
+import { ChoiceGrid } from "./ChoiceGrid";
 import { PowerUpBar } from "./PowerUpBar";
 import { Button } from "./ui";
 
@@ -45,11 +46,31 @@ export function QuestionStage() {
             transition={{ duration: 0.25 }}
             className="board-card max-h-[92dvh] w-full max-w-5xl overflow-y-auto p-5"
           >
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-2 text-sm">
-                <span className="chip chip-accent px-3 py-1">{tile.category}</span>
-                <span className="chip px-3 py-1">{worth}</span>
-                {actor && <span className="chip px-3 py-1">يجيب: {actor.name}</span>}
+            <div className="mb-4 grid gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap gap-2 text-sm">
+                  <span className="chip chip-accent px-3 py-1">{tile.category}</span>
+                  <span className="chip px-3 py-1">{worth}</span>
+                  {actor && <span className="chip px-3 py-1">يجيب: {actor.name}</span>}
+                </div>
+                {(state.phase === "primary" || state.phase === "steal") && (
+                  <div className="flex items-center gap-3 rounded-2xl border-[3px] border-ink bg-paper px-3 py-2">
+                    <TimerRing seconds={state.timer} total={total} paused={state.timerPaused} />
+                    <div>
+                      <p className="text-xs text-muted">
+                        {state.phase === "primary" ? "الوقت الأساسي" : "فرصة الفريق الآخر"}
+                      </p>
+                      <p className="text-3xl font-black tabular-nums leading-none">{state.timer}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      onClick={() => dispatch({ type: state.timerPaused ? "RESUME" : "PAUSE" })}
+                    >
+                      {state.timerPaused ? <Play size={16} /> : <Pause size={16} />}
+                      {state.timerPaused ? "استئناف" : "إيقاف مؤقت"}
+                    </Button>
+                  </div>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button variant="ghost" onClick={() => dispatch({ type: "TOGGLE_SETTINGS" })}>
@@ -85,25 +106,6 @@ export function QuestionStage() {
               </div>
             </div>
 
-            {(state.phase === "primary" || state.phase === "steal") && (
-              <div className="mb-4 flex items-center gap-4">
-                <TimerRing seconds={state.timer} total={total} paused={state.timerPaused} />
-                <div>
-                  <p className="text-sm text-muted">
-                    {state.phase === "primary" ? "الوقت الأساسي" : "فرصة الفريق الآخر"}
-                  </p>
-                  <p className="text-4xl font-black">{state.timer}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  onClick={() => dispatch({ type: state.timerPaused ? "RESUME" : "PAUSE" })}
-                >
-                  {state.timerPaused ? <Play size={16} /> : <Pause size={16} />}
-                  {state.timerPaused ? "استئناف" : "إيقاف مؤقت"}
-                </Button>
-              </div>
-            )}
-
             <h2 className="text-3xl font-black leading-relaxed sm:text-4xl">{currentQuestion.question}</h2>
 
             {state.hintVisible && (
@@ -112,16 +114,7 @@ export function QuestionStage() {
               </p>
             )}
 
-            {state.optionsVisible && (
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                {state.optionsOrder.map((option, index) => (
-                  <div key={option} className="board-card px-4 py-3 shadow-[3px_3px_0_var(--shadow)]">
-                    <span className="ml-2 font-black text-accent">{index + 1}.</span>
-                    {option}
-                  </div>
-                ))}
-              </div>
-            )}
+            {state.optionsVisible && <ChoiceGrid options={state.optionsOrder} />}
 
             {state.hostPeek && !state.answerRevealed && (
               <p className="mt-4 rounded-2xl border-[3px] border-dashed border-ink bg-paper px-4 py-3 text-sm">

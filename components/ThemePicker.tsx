@@ -7,7 +7,7 @@ export function ThemePicker({ compact = false, embedded = false }: { compact?: b
   const { setPalette, setPattern, theme } = useTheme();
 
   const swatches = (
-    <div className={compact ? "flex gap-1" : "grid grid-cols-2 gap-2 sm:grid-cols-5"} role="listbox" aria-label="لوحة الألوان">
+    <div className={compact ? "flex gap-1" : "grid grid-cols-2 gap-2 sm:grid-cols-3"} role="listbox" aria-label="لوحة الألوان">
       {PALETTES.map((palette) => {
         const active = theme.palette === palette.id;
         return (

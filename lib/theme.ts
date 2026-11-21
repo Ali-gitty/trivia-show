@@ -4,6 +4,7 @@ export const PALETTES = [
   { id: "meadow", name: "مرج", paper: "#d9efc4", accent: "#2f9e44" },
   { id: "tide", name: "موجة", paper: "#cfe8f6", accent: "#157a9c" },
   { id: "comic", name: "كوميك", paper: "#ffe08a", accent: "#e11d2e" },
+  { id: "ash", name: "رماد", paper: "#161616", accent: "#d9d4c8" },
 ] as const;
 
 export type PaletteId = (typeof PALETTES)[number]["id"];

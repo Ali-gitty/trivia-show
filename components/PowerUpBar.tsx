@@ -31,37 +31,41 @@ export function PowerUpBar({
         const team = teams[index];
         if (!team) return null;
         return (
-          <div key={team.id} className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold" style={{ color: team.color }}>
+          <div key={team.id} className="rounded-2xl border-[3px] border-ink bg-paper p-3">
+            <p className="mb-2 text-xs font-black" style={{ color: team.color }}>
               {team.name}
-            </span>
-            {kinds.map((item) => {
-              const turns = team.cooldowns[item.kind];
-              const used =
-                (item.kind === "hint" && hintVisible) || (item.kind === "choice" && optionsVisible);
-              const disabled = turns > 0 || used;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.kind}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => onUse(index, item.kind)}
-                  className="board-btn board-btn-ghost inline-flex items-center gap-2 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Icon size={14} />
-                  {item.label}
-                  <motion.span
-                    key={turns}
-                    initial={{ scale: 1.2, opacity: 0.5 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="chip chip-accent px-2 py-0.5 text-[10px]"
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {kinds.map((item) => {
+                const turns = team.cooldowns[item.kind];
+                const used =
+                  (item.kind === "hint" && hintVisible) || (item.kind === "choice" && optionsVisible);
+                const disabled = turns > 0 || used;
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.kind}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onUse(index, item.kind)}
+                    className="board-btn board-btn-ghost inline-flex w-full min-w-0 items-center justify-between gap-2 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {used && turns <= 0 ? "ظاهر" : cooldownLabel(turns)}
-                  </motion.span>
-                </button>
-              );
-            })}
+                    <span className="inline-flex min-w-0 items-center gap-2">
+                      <Icon size={14} className="shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </span>
+                    <motion.span
+                      key={turns}
+                      initial={{ scale: 1.2, opacity: 0.5 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="chip chip-accent shrink-0 px-2 py-0.5 text-[10px]"
+                    >
+                      {used && turns <= 0 ? "ظاهر" : cooldownLabel(turns)}
+                    </motion.span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         );
       })}
