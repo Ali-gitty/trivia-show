@@ -7,7 +7,7 @@ import { facePoints, isQuestionPhase, unreachableLead } from "@/lib/gameReducer"
 import { openScreenLink, readRoomParam, viewerId } from "@/lib/screenChannel";
 import type { ScreenSnapshot } from "@/lib/screenSnapshot";
 import { SoundEngine } from "@/lib/sounds";
-import { ChoiceGrid } from "./ChoiceGrid";
+import { ChoiceGrid, IsolatedText } from "./ChoiceGrid";
 import { Button } from "./ui";
 
 function subscribeNothing() {
@@ -270,7 +270,7 @@ function QuestionCard({ snap }: { snap: ScreenSnapshot }) {
         {question.options && <ChoiceGrid options={question.options} />}
         {question.answer ? (
           <p className="answer-banner mt-4 px-4 py-3 text-2xl font-black">
-            {question.activity ? "معيار التحكيم" : "الإجابة"}: {question.answer}
+            {question.activity ? "معيار التحكيم" : "الإجابة"}: <IsolatedText text={question.answer} />
           </p>
         ) : (
           <div className="mt-5 rounded-2xl border-[3px] border-ink bg-ink px-4 py-4 text-paper">

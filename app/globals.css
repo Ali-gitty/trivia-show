@@ -427,6 +427,16 @@ input[type="range"] {
   z-index: 90;
 }
 
+.ltr-sequence {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.35rem;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
 .answer-banner {
   border: 3px solid var(--ink);
   border-radius: 1rem;

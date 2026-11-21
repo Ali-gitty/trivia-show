@@ -8,12 +8,19 @@ export function categoriesOf(questions: Question[]) {
   return categories;
 }
 
+function pickIndex(length: number, random: () => number) {
+  const roll = random();
+  const index = Math.floor((Number.isFinite(roll) ? roll : 0) * length);
+  return Math.min(length - 1, Math.max(0, index));
+}
+
 export function selectQuestion(
   questions: Question[],
   category: string,
   points: Points,
   playedIds: number[],
   excludeIds: number[] = [],
+  random: () => number = Math.random,
 ) {
   const blocked = new Set(excludeIds);
   const pool = questions
@@ -25,8 +32,8 @@ export function selectQuestion(
     )
     .sort((a, b) => a.id - b.id);
   if (!pool.length) return null;
-  const fresh = pool.find((question) => !playedIds.includes(question.id));
-  if (fresh) return { question: fresh, reused: false };
+  const fresh = pool.filter((question) => !playedIds.includes(question.id));
+  if (fresh.length) return { question: fresh[pickIndex(fresh.length, random)], reused: false };
 
   let oldest = pool[0];
   let oldestAt = Number.POSITIVE_INFINITY;

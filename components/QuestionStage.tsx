@@ -7,7 +7,7 @@ import { facePoints, isQuestionPhase, powerEligible, stealEligible } from "@/lib
 import { useGame } from "./GameProvider";
 import { useTv } from "./TvBridge";
 import { BuzzerPad } from "./BuzzerPad";
-import { ChoiceGrid } from "./ChoiceGrid";
+import { ChoiceGrid, IsolatedText } from "./ChoiceGrid";
 import { PowerUpBar } from "./PowerUpBar";
 import { Button } from "./ui";
 
@@ -118,13 +118,14 @@ export function QuestionStage() {
 
             {state.hostPeek && !state.answerRevealed && (
               <p className="mt-4 rounded-2xl border-[3px] border-dashed border-ink bg-paper px-4 py-3 text-sm">
-                {tvLive ? "ظاهرة على هذا الآيباد فقط" : "معاينة خاصة غير ظاهرة للجمهور"}: {currentQuestion.answer}
+                {tvLive ? "ظاهرة على هذا الآيباد فقط" : "معاينة خاصة غير ظاهرة للجمهور"}:{" "}
+                <IsolatedText text={currentQuestion.answer} />
               </p>
             )}
 
             {state.answerRevealed && (
               <p className="answer-banner mt-4 px-4 py-3 font-black">
-                الإجابة: {currentQuestion.answer}
+                الإجابة: <IsolatedText text={currentQuestion.answer} />
               </p>
             )}
 
