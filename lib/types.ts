@@ -34,8 +34,7 @@ export const ACTIVITY_CATEGORIES = [
 export const KIDS_CATEGORIES = [
   "حيوانات للأطفال",
   "حساب بسيط للأطفال",
-  "تحديات حركية للأطفال",
-  "رسم سريع",
+  "من حولنا للأطفال",
 ] as const;
 
 export function isActivity(question: Pick<Question, "kind">) {
