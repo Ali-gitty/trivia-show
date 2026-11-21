@@ -31,8 +31,10 @@ export function CategoryDraft() {
       ? "فريقان يختاران فئتين لكل منهما، ثم فئة أخيرة للمقدم."
       : "كل فريق يختار فئة. يمكن للمقدم إضافة فئات حتى 7 ثم بدء اللوحة.";
 
-  const random = () => {
-    if (!remaining.length || !hostTurn) return;
+  const canPick = Boolean(plan) && remaining.length > 0 && !(state.mode === "buzzer" && hostTurn && state.draftPicks.length >= 7);
+
+  const pickRandomCategory = () => {
+    if (!canPick) return;
     const category = remaining[Math.floor(Math.random() * remaining.length)];
     pickCategory(category);
   };
@@ -45,10 +47,18 @@ export function CategoryDraft() {
           <h1 className="mt-3 text-4xl font-black">{title}</h1>
           <p className="mt-2 text-muted">{detail}</p>
         </div>
-        <Button variant="ghost" onClick={() => dispatch({ type: "TOGGLE_SETTINGS" })}>
-          <Settings2 size={16} />
-          الإعدادات
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {canPick && (
+            <Button onClick={pickRandomCategory}>
+              <Dices size={16} />
+              فئة عشوائية
+            </Button>
+          )}
+          <Button variant="ghost" onClick={() => dispatch({ type: "TOGGLE_SETTINGS" })}>
+            <Settings2 size={16} />
+            الإعدادات
+          </Button>
+        </div>
       </header>
 
       <div className="flex flex-wrap gap-2">
@@ -113,10 +123,10 @@ export function CategoryDraft() {
       )}
 
       <Panel className="flex flex-wrap items-center gap-3 p-4">
-        {hostTurn && (
-          <Button variant="ghost" onClick={random} disabled={!remaining.length || state.draftPicks.length >= 7}>
+        {canPick && (
+          <Button variant="ghost" onClick={pickRandomCategory}>
             <Dices size={16} />
-            عشوائي
+            فئة عشوائية
           </Button>
         )}
         {state.mode === "buzzer" && hostTurn && (
