@@ -1,0 +1,589 @@
+import { buildBoard, selectQuestion } from "./board";
+import {
+  clampScore,
+  DEFAULT_HOST_SETTINGS,
+  freshCooldowns,
+  normalizeHostSettings,
+  TEAM_NAMES,
+  type GameState,
+  type HostSettings,
+  type Outcome,
+  type Phase,
+  type PowerKind,
+  type Question,
+  type SoundName,
+  type Team,
+} from "./types";
+
+const BASE_COOLDOWN = 3;
+const STEAL_COOLDOWN = 5;
+
+export type Action =
+  | { type: "HYDRATE"; state: GameState }
+  | { type: "SET_MUTE"; muted: boolean }
+  | { type: "SET_SETTINGS"; settings: Partial<HostSettings> }
+  | { type: "TOGGLE_HOST" }
+  | { type: "TOGGLE_BANK" }
+  | { type: "TOGGLE_SETTINGS" }
+  | { type: "OPEN_SCORE"; teamId: string | null }
+  | { type: "START_DRAFT"; mode: GameState["mode"]; teams: { name: string; color: string }[] }
+  | { type: "PICK_CATEGORY"; category: string; questions: Question[]; playedIds: number[] }
+  | { type: "FINISH_DRAFT"; questions: Question[]; playedIds: number[] }
+  | { type: "OPEN_TILE"; tileId: string; questions: Question[] }
+  | {
+      type: "REPLACE_CURRENT";
+      questions: Question[];
+      playedIds: number[];
+      excludeIds?: number[];
+    }
+  | { type: "TICK" }
+  | { type: "PAUSE" }
+  | { type: "RESUME" }
+  | { type: "LOCK" }
+  | { type: "USE_POWER"; teamIndex: number; kind: "hint" | "choice" | "skip"; options?: string[] }
+  | { type: "BUZZ"; teamIndex: number }
+  | { type: "STEAL"; teamIndex: number }
+  | { type: "REVEAL" }
+  | { type: "AWARD"; teamIndex: number | null }
+  | { type: "BUZZ_CORRECT" }
+  | { type: "BUZZ_WRONG" }
+  | { type: "CLOSE_QUESTION" }
+  | { type: "CONTINUE" }
+  | { type: "TOGGLE_PEEK" }
+  | { type: "ADJUST_SCORE"; teamId: string; delta?: number; exact?: number }
+  | { type: "RENAME_TEAM"; teamId: string; name: string }
+  | { type: "RESET_COOLDOWN"; teamId: string; kind: PowerKind }
+  | { type: "END_MATCH" }
+  | { type: "REPLAY" };
+
+export function createInitialState(): GameState {
+  return {
+    phase: "lobby",
+    mode: "classic",
+    teams: [],
+    draftPicks: [],
+    draftError: null,
+    board: [],
+    activeTeamIndex: 0,
+    currentTileId: null,
+    timer: 0,
+    timerRunning: false,
+    timerPaused: false,
+    buzzingTeamIndex: null,
+    lockedOutTeamIds: [],
+    hintVisible: false,
+    optionsVisible: false,
+    optionsOrder: [],
+    answerRevealed: false,
+    hostPeek: false,
+    usedThisQuestion: [],
+    hostPanelOpen: false,
+    bankOpen: false,
+    settingsOpen: false,
+    scoreEditorTeamId: null,
+    muted: false,
+    settings: { ...DEFAULT_HOST_SETTINGS },
+    cue: { id: 0, name: null },
+    outcome: null,
+    notice: null,
+  };
+}
+
+export function draftPlan(state: GameState): { teamIndex: number | null; optional: boolean } | null {
+  if (state.phase !== "draft") return null;
+  if (state.mode === "classic") {
+    const steps: Array<number | null> = [0, 0, 1, 1, null];
+    if (state.draftPicks.length >= steps.length) return null;
+    return { teamIndex: steps[state.draftPicks.length] ?? null, optional: false };
+  }
+  if (state.draftPicks.length < state.teams.length) {
+    return { teamIndex: state.draftPicks.length, optional: false };
+  }
+  if (state.draftPicks.length >= 7) return { teamIndex: null, optional: true };
+  return { teamIndex: null, optional: true };
+}
+
+export function powerEligible(state: GameState) {
+  if (state.phase === "primary") return [state.activeTeamIndex];
+  if (state.phase === "steal") return [state.activeTeamIndex === 0 ? 1 : 0];
+  if (state.phase === "buzzOpen" || state.phase === "buzzLocked") {
+    return state.teams
+      .map((team, index) => ({ team, index }))
+      .filter(({ team }) => !state.lockedOutTeamIds.includes(team.id))
+      .map(({ index }) => index);
+  }
+  return [] as number[];
+}
+
+export function stealEligible(state: GameState) {
+  if (state.mode !== "buzzer" || state.phase !== "buzzLocked" || state.buzzingTeamIndex == null) {
+    return [] as number[];
+  }
+  return state.teams
+    .map((team, index) => ({ team, index }))
+    .filter(
+      ({ team, index }) =>
+        index !== state.buzzingTeamIndex &&
+        team.cooldowns.steal === 0 &&
+        !state.lockedOutTeamIds.includes(team.id),
+    )
+    .map(({ index }) => index);
+}
+
+export function isQuestionPhase(phase: Phase) {
+  return (
+    phase === "primary" ||
+    phase === "steal" ||
+    phase === "adjudicate" ||
+    phase === "buzzOpen" ||
+    phase === "buzzLocked" ||
+    phase === "resolved"
+  );
+}
+
+function sound(state: GameState, name: SoundName): GameState["cue"] {
+  return { id: state.cue.id + 1, name };
+}
+
+function shuffle(values: string[]) {
+  const copy = [...values];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[swap]] = [copy[swap], copy[index]];
+  }
+  return copy;
+}
+
+function questionFields() {
+  return {
+    currentTileId: null,
+    timer: 0,
+    timerRunning: false,
+    timerPaused: false,
+    buzzingTeamIndex: null,
+    lockedOutTeamIds: [] as string[],
+    hintVisible: false,
+    optionsVisible: false,
+    optionsOrder: [] as string[],
+    answerRevealed: false,
+    hostPeek: false,
+    usedThisQuestion: [] as GameState["usedThisQuestion"],
+    outcome: null as Outcome | null,
+    notice: null as string | null,
+  };
+}
+
+function decay(teams: Team[], used: GameState["usedThisQuestion"]) {
+  return teams.map((team, index) => {
+    const cooldowns = { ...team.cooldowns };
+    (["hint", "choice", "skip", "steal"] as const).forEach((kind) => {
+      const spent = used.some((use) => use.teamIndex === index && use.kind === kind);
+      if (spent) cooldowns[kind] = kind === "steal" ? STEAL_COOLDOWN : BASE_COOLDOWN;
+      else cooldowns[kind] = Math.max(0, cooldowns[kind] - 1);
+    });
+    return { ...team, cooldowns };
+  });
+}
+
+function settle(
+  state: GameState,
+  tileStatus: "played" | "skipped",
+  nextPicker: number,
+  cueName: SoundName | null,
+): GameState {
+  const board = state.board.map((tile) =>
+    tile.id === state.currentTileId ? { ...tile, status: tileStatus } : tile,
+  );
+  const done = board.length > 0 && board.every((tile) => tile.status !== "open");
+  return {
+    ...state,
+    ...questionFields(),
+    teams: decay(state.teams, state.usedThisQuestion),
+    board,
+    phase: done ? "podium" : "board",
+    activeTeamIndex: nextPicker,
+    cue: cueName ? sound(state, cueName) : state.cue,
+  };
+}
+
+function spend(state: GameState, teamIndex: number, kind: PowerKind): GameState {
+  return {
+    ...state,
+    teams: state.teams.map((team, index) =>
+      index === teamIndex
+        ? {
+            ...team,
+            cooldowns: {
+              ...team.cooldowns,
+              [kind]: kind === "steal" ? STEAL_COOLDOWN : BASE_COOLDOWN,
+            },
+          }
+        : team,
+    ),
+    usedThisQuestion: [...state.usedThisQuestion, { teamIndex, kind }],
+  };
+}
+
+function startBoard(state: GameState, questions: Question[], playedIds: number[]): GameState {
+  const categories = state.draftPicks.map((pick) => pick.category);
+  const built = buildBoard(categories, questions, playedIds);
+  if (built.error) return { ...state, draftError: built.error };
+  return {
+    ...state,
+    ...questionFields(),
+    phase: "board",
+    board: built.board,
+    activeTeamIndex: 0,
+    draftError: null,
+  };
+}
+
+function livePower(state: GameState, teamIndex: number, kind: "hint" | "choice" | "skip") {
+  const team = state.teams[teamIndex];
+  if (!team || team.cooldowns[kind] > 0) return false;
+  const live =
+    state.phase === "primary" ||
+    state.phase === "steal" ||
+    state.phase === "buzzOpen" ||
+    state.phase === "buzzLocked";
+  if (!live) return false;
+  if (state.mode === "classic") return powerEligible(state).includes(teamIndex);
+  return !state.lockedOutTeamIds.includes(team.id);
+}
+
+function currentPoints(state: GameState) {
+  return state.board.find((tile) => tile.id === state.currentTileId)?.points ?? 0;
+}
+
+export function gameReducer(state: GameState, action: Action): GameState {
+  switch (action.type) {
+    case "HYDRATE":
+      return action.state;
+    case "SET_MUTE":
+      return { ...state, muted: action.muted };
+    case "SET_SETTINGS":
+      return { ...state, settings: normalizeHostSettings({ ...state.settings, ...action.settings }) };
+    case "TOGGLE_HOST":
+      return { ...state, hostPanelOpen: !state.hostPanelOpen };
+    case "TOGGLE_BANK":
+      return { ...state, bankOpen: !state.bankOpen };
+    case "TOGGLE_SETTINGS":
+      return { ...state, settingsOpen: !state.settingsOpen };
+    case "OPEN_SCORE":
+      return { ...state, scoreEditorTeamId: action.teamId };
+    case "START_DRAFT": {
+      const teams = action.teams.map((team, index) => ({
+        id: `team-${index + 1}`,
+        name: team.name.trim() || TEAM_NAMES[index] || `الفريق ${index + 1}`,
+        color: team.color,
+        score: 0,
+        cooldowns: freshCooldowns(),
+      }));
+      return {
+        ...createInitialState(),
+        muted: state.muted,
+        settings: state.settings,
+        cue: state.cue,
+        phase: "draft",
+        mode: action.mode,
+        teams,
+      };
+    }
+    case "PICK_CATEGORY": {
+      const plan = draftPlan(state);
+      if (!plan) return state;
+      if (state.draftPicks.some((pick) => pick.category === action.category)) return state;
+      if (plan.optional && state.draftPicks.length >= 7) return state;
+      const draftPicks = [
+        ...state.draftPicks,
+        { category: action.category, teamIndex: plan.teamIndex },
+      ];
+      const next = { ...state, draftPicks, draftError: null };
+      if (state.mode === "classic" && draftPicks.length === 5) {
+        return startBoard(next, action.questions, action.playedIds);
+      }
+      return next;
+    }
+    case "FINISH_DRAFT":
+      if (state.mode !== "buzzer" || state.draftPicks.length < state.teams.length) return state;
+      return startBoard(state, action.questions, action.playedIds);
+    case "OPEN_TILE": {
+      if (state.phase !== "board") return state;
+      const tile = state.board.find((item) => item.id === action.tileId && item.status === "open");
+      if (!tile) return state;
+      const question = action.questions.find((item) => item.id === tile.questionId);
+      if (!question) return { ...state, notice: "هذا السؤال لم يعد موجوداً في البنك" };
+      const opened = {
+        ...state,
+        ...questionFields(),
+        currentTileId: tile.id,
+        notice: null,
+        cue: sound(state, "tile"),
+      };
+      if (question.kind === "activity") {
+        return { ...opened, phase: "adjudicate", timer: 0, timerRunning: false };
+      }
+      if (state.mode === "classic") {
+        return {
+          ...opened,
+          phase: "primary",
+          timer: state.settings.primarySeconds,
+          timerRunning: true,
+        };
+      }
+      return { ...opened, phase: "buzzOpen", timer: 0, timerRunning: false };
+    }
+    case "REPLACE_CURRENT": {
+      if (!isQuestionPhase(state.phase) || !state.currentTileId) return state;
+      const tile = state.board.find((item) => item.id === state.currentTileId);
+      if (!tile) return state;
+      const exclude = [
+        tile.questionId,
+        ...(action.excludeIds ?? []),
+        ...state.board.map((item) => item.questionId),
+      ];
+      const picked = selectQuestion(
+        action.questions,
+        tile.category,
+        tile.points,
+        action.playedIds,
+        exclude,
+      );
+      if (!picked) {
+        return { ...state, notice: "لا يوجد بديل متاح في نفس الفئة والنقاط" };
+      }
+      const board = state.board.map((item) =>
+        item.id === tile.id
+          ? { ...item, questionId: picked.question.id, reused: picked.reused }
+          : item,
+      );
+      const base = {
+        ...state,
+        ...questionFields(),
+        board,
+        currentTileId: tile.id,
+        notice: "تم استبدال المحتوى",
+        cue: sound(state, "tile"),
+      };
+      if (picked.question.kind === "activity") {
+        return { ...base, phase: "adjudicate", timer: 0, timerRunning: false };
+      }
+      if (state.mode === "classic") {
+        return {
+          ...base,
+          phase: "primary",
+          timer: state.settings.primarySeconds,
+          timerRunning: true,
+        };
+      }
+      return { ...base, phase: "buzzOpen", timer: 0, timerRunning: false };
+    }
+    case "TICK": {
+      if (!state.timerRunning || state.timerPaused) return state;
+      if (state.phase !== "primary" && state.phase !== "steal") return state;
+      if (state.timer <= 1) {
+        if (state.phase === "primary") {
+          return {
+            ...state,
+            phase: "steal",
+            timer: state.settings.stealSeconds,
+            timerRunning: true,
+            timerPaused: false,
+            cue: sound(state, "timeup"),
+          };
+        }
+        return {
+          ...state,
+          phase: "adjudicate",
+          timer: 0,
+          timerRunning: false,
+          timerPaused: false,
+          cue: sound(state, "timeup"),
+        };
+      }
+      const timer = state.timer - 1;
+      return {
+        ...state,
+        timer,
+        cue: timer <= 10 ? sound(state, "tick") : state.cue,
+      };
+    }
+    case "PAUSE":
+      if (!state.timerRunning || (state.phase !== "primary" && state.phase !== "steal")) return state;
+      return { ...state, timerPaused: true };
+    case "RESUME":
+      if (!state.timerRunning) return state;
+      return { ...state, timerPaused: false };
+    case "LOCK":
+      if (state.phase === "primary") {
+        return {
+          ...state,
+          phase: "steal",
+          timer: state.settings.stealSeconds,
+          timerRunning: true,
+          timerPaused: false,
+        };
+      }
+      if (state.phase === "steal") {
+        return { ...state, phase: "adjudicate", timer: 0, timerRunning: false, timerPaused: false };
+      }
+      return state;
+    case "USE_POWER": {
+      if (!livePower(state, action.teamIndex, action.kind)) return state;
+      if (action.kind === "hint") {
+        if (state.hintVisible) return state;
+        return { ...spend(state, action.teamIndex, "hint"), hintVisible: true, cue: sound(state, "power") };
+      }
+      if (action.kind === "choice") {
+        if (state.optionsVisible || !action.options?.length) return state;
+        return {
+          ...spend(state, action.teamIndex, "choice"),
+          optionsVisible: true,
+          optionsOrder: shuffle(action.options),
+          cue: sound(state, "power"),
+        };
+      }
+      const spent = spend(state, action.teamIndex, "skip");
+      const nextPicker = (state.activeTeamIndex + 1) % Math.max(1, state.teams.length);
+      return settle(spent, "skipped", nextPicker, "power");
+    }
+    case "BUZZ": {
+      if (state.phase !== "buzzOpen") return state;
+      const team = state.teams[action.teamIndex];
+      if (!team || state.lockedOutTeamIds.includes(team.id)) return state;
+      return {
+        ...state,
+        phase: "buzzLocked",
+        buzzingTeamIndex: action.teamIndex,
+        notice: null,
+        cue: sound(state, "buzz"),
+      };
+    }
+    case "STEAL": {
+      if (!stealEligible(state).includes(action.teamIndex)) return state;
+      const spent = spend(state, action.teamIndex, "steal");
+      return { ...spent, buzzingTeamIndex: action.teamIndex, cue: sound(state, "steal") };
+    }
+    case "REVEAL":
+      if (state.phase !== "adjudicate" && state.phase !== "resolved" && state.phase !== "buzzLocked") {
+        return state;
+      }
+      return { ...state, answerRevealed: true };
+    case "AWARD": {
+      if (state.phase !== "adjudicate" || !state.answerRevealed) return state;
+      const points = currentPoints(state);
+      const teams =
+        action.teamIndex == null
+          ? state.teams
+          : state.teams.map((team, index) =>
+              index === action.teamIndex ? { ...team, score: clampScore(team.score + points) } : team,
+            );
+      const nextPicker = (state.activeTeamIndex + 1) % Math.max(1, state.teams.length);
+      return settle(
+        { ...state, teams },
+        "played",
+        nextPicker,
+        action.teamIndex == null ? "wrong" : "correct",
+      );
+    }
+    case "BUZZ_CORRECT": {
+      if (state.phase !== "buzzLocked" || state.buzzingTeamIndex == null) return state;
+      const points = currentPoints(state);
+      const index = state.buzzingTeamIndex;
+      const teams = state.teams.map((team, teamIndex) =>
+        teamIndex === index ? { ...team, score: clampScore(team.score + points) } : team,
+      );
+      return {
+        ...state,
+        teams,
+        phase: "resolved",
+        answerRevealed: true,
+        timerRunning: false,
+        outcome: { kind: "correct", teamIndex: index, delta: points },
+        cue: sound(state, "correct"),
+      };
+    }
+    case "BUZZ_WRONG": {
+      if (state.phase !== "buzzLocked" || state.buzzingTeamIndex == null) return state;
+      const penalty = currentPoints(state) / 2;
+      const index = state.buzzingTeamIndex;
+      const team = state.teams[index];
+      const teams = state.teams.map((item, teamIndex) =>
+        teamIndex === index ? { ...item, score: clampScore(item.score - penalty) } : item,
+      );
+      return {
+        ...state,
+        teams,
+        lockedOutTeamIds: [...state.lockedOutTeamIds, team.id],
+        buzzingTeamIndex: null,
+        phase: "buzzOpen",
+        notice: `خصم ${penalty} من ${team.name}`,
+        cue: sound(state, "wrong"),
+      };
+    }
+    case "CLOSE_QUESTION":
+      if (state.phase !== "buzzOpen" && state.phase !== "buzzLocked") return state;
+      return {
+        ...state,
+        phase: "resolved",
+        answerRevealed: true,
+        timerRunning: false,
+        outcome: { kind: "closed", teamIndex: null, delta: 0 },
+      };
+    case "CONTINUE": {
+      if (state.phase !== "resolved" || !state.outcome) return state;
+      const nextPicker =
+        state.outcome.kind === "correct" && state.outcome.teamIndex != null
+          ? state.outcome.teamIndex
+          : (state.activeTeamIndex + 1) % Math.max(1, state.teams.length);
+      const status = state.outcome.kind === "closed" ? "skipped" : "played";
+      return settle(state, status, nextPicker, null);
+    }
+    case "TOGGLE_PEEK":
+      if (!isQuestionPhase(state.phase)) return state;
+      return { ...state, hostPeek: !state.hostPeek };
+    case "ADJUST_SCORE":
+      return {
+        ...state,
+        teams: state.teams.map((team) => {
+          if (team.id !== action.teamId) return team;
+          const next = action.exact == null ? team.score + (action.delta ?? 0) : action.exact;
+          return { ...team, score: clampScore(next) };
+        }),
+      };
+    case "RENAME_TEAM":
+      return {
+        ...state,
+        teams: state.teams.map((team) =>
+          team.id === action.teamId ? { ...team, name: action.name.trim() || team.name } : team,
+        ),
+      };
+    case "RESET_COOLDOWN":
+      return {
+        ...state,
+        teams: state.teams.map((team) =>
+          team.id === action.teamId
+            ? { ...team, cooldowns: { ...team.cooldowns, [action.kind]: 0 } }
+            : team,
+        ),
+      };
+    case "END_MATCH":
+      if (state.phase === "lobby" || state.phase === "podium") return state;
+      return {
+        ...state,
+        ...questionFields(),
+        phase: "podium",
+        timerRunning: false,
+        hostPanelOpen: false,
+      };
+    case "REPLAY":
+      return {
+        ...createInitialState(),
+        muted: state.muted,
+        settings: state.settings,
+        cue: state.cue,
+      };
+    default:
+      return state;
+  }
+}
