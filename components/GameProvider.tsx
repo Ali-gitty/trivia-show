@@ -17,6 +17,7 @@ import {
   clearCustomBank,
   loadCustomBank,
   loadPlayedIds,
+  resolveBank,
   saveCustomBank,
   savePlayedIds,
   STORAGE,
@@ -96,7 +97,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const id = window.requestAnimationFrame(() => {
       const custom = loadCustomBank();
-      if (custom) setBank(custom);
+      const resolved = resolveBank(custom);
+      setBank(resolved);
+      if (custom && resolved.length > custom.length) saveCustomBank(resolved);
       setPlayedIds(loadPlayedIds());
       const muted = localStorage.getItem(STORAGE.mute) === "1";
       const settings = loadPersistedSettings();
@@ -227,8 +230,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [bank, playedIds]);
 
   const openTile = useCallback((tileId: string) => {
-    dispatch({ type: "OPEN_TILE", tileId, questions: bank });
-  }, [bank]);
+    dispatch({ type: "OPEN_TILE", tileId, questions: bank, playedIds });
+  }, [bank, playedIds]);
 
   const usePower = useCallback((teamIndex: number, kind: "hint" | "choice" | "skip") => {
     const tile = state.board.find((item) => item.id === state.currentTileId);

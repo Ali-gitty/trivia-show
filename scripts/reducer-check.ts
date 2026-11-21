@@ -1,5 +1,5 @@
 import { gameReducer, createInitialState, powerEligible, unreachableLead } from "../lib/gameReducer";
-import { optionDirection } from "../lib/direction";
+import { numberSequence, optionDirection } from "../lib/direction";
 import { publicAnnouncement } from "../lib/speech";
 import { normalizeHostSettings } from "../lib/types";
 import type { Question } from "../lib/types";
@@ -41,8 +41,22 @@ if (state.phase !== "board" || state.board.length !== 25) {
 }
 
 const tile = state.board[0];
-state = gameReducer(state, { type: "OPEN_TILE", tileId: tile.id, questions });
+if (tile.questionId !== 0) throw new Error("tile should open unassigned");
+const rich = [
+  ...questions,
+  ...[901, 902, 903, 904, 905].map((id) => question(id, tile.category, tile.points)),
+];
+const draws = new Set<number>();
+for (let round = 0; round < 20; round += 1) {
+  const sample = gameReducer(state, { type: "OPEN_TILE", tileId: tile.id, questions: rich, playedIds: [] });
+  const assigned = sample.board.find((item) => item.id === tile.id)?.questionId ?? 0;
+  if (assigned > 0) draws.add(assigned);
+}
+if (draws.size < 3) throw new Error(`open tile draws too narrow: ${draws.size}`);
+state = gameReducer(state, { type: "OPEN_TILE", tileId: tile.id, questions, playedIds: [] });
 if (state.phase !== "primary" || state.timer !== 60) throw new Error("primary timer");
+const opened = state.board.find((item) => item.id === tile.id);
+if (!opened || opened.questionId <= 0) throw new Error("open did not assign a question");
 state = gameReducer(state, { type: "LOCK" });
 if (state.phase !== "steal" || state.timer !== 15) throw new Error("steal timer");
 state = gameReducer(state, { type: "LOCK" });
@@ -52,7 +66,12 @@ state = gameReducer(state, { type: "AWARD", teamIndex: 0 });
 if (state.teams[0].score !== tile.points || state.phase !== "board") throw new Error("award");
 if (state.activeTeamIndex !== 1) throw new Error("turn did not alternate");
 
-state = gameReducer(state, { type: "OPEN_TILE", tileId: state.board.find((item) => item.status === "open")!.id, questions });
+state = gameReducer(state, {
+  type: "OPEN_TILE",
+  tileId: state.board.find((item) => item.status === "open")!.id,
+  questions,
+  playedIds: [],
+});
 const actor = powerEligible(state)[0];
 state = gameReducer(state, { type: "USE_POWER", teamIndex: actor, kind: "hint" });
 if (!state.hintVisible || state.teams[actor].cooldowns.hint !== 3) throw new Error("hint cooldown");
@@ -77,7 +96,7 @@ for (const category of categories.slice(0, 3)) {
 multi = gameReducer(multi, { type: "FINISH_DRAFT", questions, playedIds: [] });
 if (multi.board.length !== 15) throw new Error("multi board");
 const buzzTile = multi.board.find((item) => item.points === 500)!;
-multi = gameReducer(multi, { type: "OPEN_TILE", tileId: buzzTile.id, questions });
+multi = gameReducer(multi, { type: "OPEN_TILE", tileId: buzzTile.id, questions, playedIds: [] });
 multi = gameReducer(multi, { type: "BUZZ", teamIndex: 0 });
 multi = gameReducer(multi, { type: "STEAL", teamIndex: 1 });
 if (multi.buzzingTeamIndex !== 1 || multi.teams[1].cooldowns.steal !== 5) throw new Error("steal");
@@ -101,7 +120,7 @@ const still = unreachableLead(blown);
 if (!still) throw new Error("one double is not enough for this gap");
 const doubledTile = blown.board.find((item) => item.status === "open" && item.points === 500);
 if (!doubledTile) throw new Error("missing open tile");
-blown = gameReducer(blown, { type: "OPEN_TILE", tileId: doubledTile.id, questions });
+blown = gameReducer(blown, { type: "OPEN_TILE", tileId: doubledTile.id, questions, playedIds: [] });
 blown = gameReducer(blown, { type: "LOCK" });
 blown = gameReducer(blown, { type: "LOCK" });
 blown = gameReducer(blown, { type: "REVEAL" });
@@ -132,6 +151,7 @@ if (!aloud.text.includes("الإجابة السرية")) throw new Error("speech
 const kept = normalizeHostSettings({ primarySeconds: 40, speech: true, speechRate: 1.1 });
 if (!kept.speech || kept.speechRate !== 1.1 || kept.primarySeconds !== 40) throw new Error("settings dropped speech");
 if (optionDirection("4, 8, 15, 16, 23, 42") !== "ltr") throw new Error("numbers should stay left to right");
+if (numberSequence("4, 8, 15, 16, 23, 42")?.join("|") !== "4|8|15|16|23|42") throw new Error("number list split");
 if (optionDirection("الحضارة السومرية") !== "rtl") throw new Error("arabic choices should stay right to left");
 
 console.log("reducer checks passed");

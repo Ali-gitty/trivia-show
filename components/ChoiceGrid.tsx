@@ -1,4 +1,25 @@
-import { optionDirection } from "@/lib/direction";
+import { numberSequence, optionDirection } from "@/lib/direction";
+
+export function IsolatedText({ text, className = "" }: { text: string; className?: string }) {
+  const pieces = numberSequence(text);
+  if (!pieces) {
+    return (
+      <span dir={optionDirection(text)} className={className} style={{ unicodeBidi: "isolate" }}>
+        {text}
+      </span>
+    );
+  }
+  return (
+    <span dir="ltr" className={`ltr-sequence ${className}`} style={{ direction: "ltr", unicodeBidi: "isolate" }}>
+      {pieces.map((piece, index) => (
+        <span key={`${piece}-${index}`} dir="ltr" className="tabular-nums">
+          {index > 0 ? <span aria-hidden="true">, </span> : null}
+          {`\u2066${piece}\u2069`}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 export function ChoiceGrid({ options }: { options: string[] }) {
   return (
@@ -11,12 +32,7 @@ export function ChoiceGrid({ options }: { options: string[] }) {
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border-[2.5px] border-ink bg-card text-sm font-black tabular-nums">
             {index + 1}
           </span>
-          <span
-            dir={optionDirection(option)}
-            className="min-w-0 flex-1 text-base font-bold leading-7 [unicode-bidi:isolate]"
-          >
-            {option}
-          </span>
+          <IsolatedText text={option} className="min-w-0 flex-1 text-base font-bold leading-7" />
         </div>
       ))}
     </div>

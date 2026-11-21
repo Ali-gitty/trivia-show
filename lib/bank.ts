@@ -34,6 +34,14 @@ export function loadCustomBank(): Question[] | null {
   }
 }
 
+export function resolveBank(custom: Question[] | null): Question[] {
+  if (!custom?.length) return bundledQuestions;
+  const map = new Map<number, Question>();
+  for (const question of bundledQuestions) map.set(question.id, question);
+  for (const question of custom) map.set(question.id, question);
+  return [...map.values()].sort((a, b) => a.id - b.id);
+}
+
 export function saveCustomBank(questions: Question[]) {
   const normalized = questions
     .map((item) => toQuestion(item))
