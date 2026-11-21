@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { AudioLines, Eye, EyeOff, Pause, Play, Settings2 } from "lucide-react";
+import { CategoryLabel } from "@/lib/categoryIcons";
 import { speakArabic, visibleReading } from "@/lib/speech";
 import { facePoints, isQuestionPhase, powerEligible, stealEligible } from "@/lib/gameReducer";
 import { useGame } from "./GameProvider";
@@ -49,7 +50,9 @@ export function QuestionStage() {
             <div className="mb-4 grid gap-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap gap-2 text-sm">
-                  <span className="chip chip-accent px-3 py-1">{tile.category}</span>
+                  <span className="chip chip-accent px-3 py-1">
+                    <CategoryLabel category={tile.category} size={14} />
+                  </span>
                   <span className="chip px-3 py-1">{worth}</span>
                   {actor && <span className="chip px-3 py-1">يجيب: {actor.name}</span>}
                 </div>

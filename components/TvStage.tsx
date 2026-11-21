@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Check, Minus, Volume2 } from "lucide-react";
+import { CategoryLabel } from "@/lib/categoryIcons";
 import { POINT_VALUES } from "@/lib/types";
 import { facePoints, isQuestionPhase, unreachableLead } from "@/lib/gameReducer";
 import { openScreenLink, readRoomParam, viewerId } from "@/lib/screenChannel";
@@ -131,7 +132,7 @@ function DraftView({ snap }: { snap: ScreenSnapshot }) {
               className="chip px-4 py-2 text-lg font-black"
               style={{ boxShadow: team ? `inset 6px 0 0 ${team.color}` : undefined }}
             >
-              {pick.category}
+              <CategoryLabel category={pick.category} size={18} />
               <span className="mr-3 text-sm font-medium text-muted">{team ? team.name : "المقدم"}</span>
             </span>
           );
@@ -160,7 +161,7 @@ function MatchView({ snap }: { snap: ScreenSnapshot }) {
             {categories.map((category) => (
               <div key={category} className="grid gap-2">
                 <h2 className="cat-head grid min-h-16 place-items-center px-2 text-center text-sm font-black">
-                  {category}
+                  <CategoryLabel category={category} stacked size={18} />
                 </h2>
                 {POINT_VALUES.map((points) => {
                   const tile = snap.board.find((item) => item.category === category && item.points === points);
@@ -250,7 +251,9 @@ function QuestionCard({ snap }: { snap: ScreenSnapshot }) {
     <div className="scrim fixed inset-0 z-30 grid place-items-center p-3">
       <section className="board-card max-h-[92dvh] w-full max-w-5xl overflow-y-auto p-5 sm:p-8">
         <div className="mb-4 flex flex-wrap gap-2 text-sm">
-          <span className="chip chip-accent px-3 py-1">{question.category}</span>
+          <span className="chip chip-accent px-3 py-1">
+            <CategoryLabel category={question.category} size={14} />
+          </span>
           <span className="chip px-3 py-1">{facePoints(question.points, snap.pointMultiplier)}</span>
           {question.activity && <span className="chip px-3 py-1">فعالية</span>}
           {actor && <span className="chip px-3 py-1">{actor.name}</span>}
