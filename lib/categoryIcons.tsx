@@ -18,8 +18,10 @@ import {
   Landmark,
   Lightbulb,
   MapPinned,
-  MonitorPlay,
+  Mic2,
   Mountain,
+  Music2,
+  Paintbrush,
   PawPrint,
   PersonStanding,
   Plane,
@@ -27,9 +29,11 @@ import {
   Rocket,
   Shield,
   Sparkles,
+  Timer,
   Tv,
   UtensilsCrossed,
   Wifi,
+  Zap,
 } from "lucide-react";
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -61,12 +65,16 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   "حيوانات للأطفال": PawPrint,
   "حساب بسيط للأطفال": Calculator,
   "من حولنا للأطفال": Earth,
-  "رسم سريع": Sparkles,
-  "وصف سيء ومضحك": Drama,
-  "تمثيل وتخميم": Drama,
-  "تحديات حركية للأطفال": PersonStanding,
-  "تحديات عائلية خفيفة": Sparkles,
-  "ألعاب صوت وكلام": MonitorPlay,
+  "ارسم المشهد": Paintbrush,
+  "اشرح بشكل مضحك": Mic2,
+  "تمثيل صامت": Drama,
+  "كلمات ممنوعة": Zap,
+  "سرعة وبديهة": Timer,
+  "ارتجال وإقناع": Sparkles,
+  "توازن ومهارات": PersonStanding,
+  "موسيقى وشارات": Music2,
+  "رسم للأطفال": Paintbrush,
+  "حركة للأطفال": Dumbbell,
 };
 
 export function categoryIcon(category: string): LucideIcon {

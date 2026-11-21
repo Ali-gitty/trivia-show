@@ -153,4 +153,48 @@ if (optionDirection("4, 8, 15, 16, 23, 42") !== "ltr") throw new Error("numbers 
 if (numberSequence("4, 8, 15, 16, 23, 42")?.join("|") !== "4|8|15|16|23|42") throw new Error("number list split");
 if (optionDirection("الحضارة السومرية") !== "rtl") throw new Error("arabic choices should stay right to left");
 
+const activityQuestions = [
+  ...questions,
+  ...([100, 200, 300, 400, 500] as const).map((points, index) => ({
+    id: 900 + index,
+    kind: "activity" as const,
+    category: "ارسم المشهد",
+    points,
+    question: "ارسم سفينة",
+    answer: "معيار الحكم",
+    hint: "تلميح",
+    options: ["أ", "ب", "ج", "د"] as [string, string, string, string],
+  })),
+];
+let activity = gameReducer(createInitialState(), {
+  type: "START_DRAFT",
+  mode: "classic",
+  teams: [
+    { name: "الأول", color: "#22d3ee" },
+    { name: "الثاني", color: "#fb923c" },
+  ],
+});
+for (const category of ["ارسم المشهد", ...categories.slice(0, 4)]) {
+  activity = gameReducer(activity, {
+    type: "PICK_CATEGORY",
+    category,
+    questions: activityQuestions,
+    playedIds: [],
+  });
+}
+const activityTile = activity.board.find((item) => item.category === "ارسم المشهد" && item.points === 100);
+if (!activityTile) throw new Error("activity tile missing");
+activity = gameReducer(activity, {
+  type: "OPEN_TILE",
+  tileId: activityTile.id,
+  questions: activityQuestions,
+  playedIds: [],
+});
+if (activity.phase !== "adjudicate" || activity.timerRunning) {
+  throw new Error("activity should open for host judgment");
+}
+activity = gameReducer(activity, { type: "REVEAL" });
+activity = gameReducer(activity, { type: "AWARD", teamIndex: 1 });
+if (activity.teams[1].score !== 100 || activity.phase !== "board") throw new Error("activity award");
+
 console.log("reducer checks passed");

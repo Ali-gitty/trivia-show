@@ -75,20 +75,22 @@ for (const [id, points] of Object.entries(expectPoints)) {
   if (!found || found.points !== points) throw new Error(`points for ${id} are ${found?.points}, expected ${points}`);
 }
 
-const tiers = new Map<string, Map<number, number>>();
+const tiers = new Map<string, { kind: string; set: Map<number, number> }>();
 for (const item of bank) {
-  const set = tiers.get(item.category) ?? new Map<number, number>();
-  set.set(item.points, (set.get(item.points) ?? 0) + 1);
-  tiers.set(item.category, set);
+  const entry = tiers.get(item.category) ?? { kind: item.kind ?? "trivia", set: new Map<number, number>() };
+  entry.set.set(item.points, (entry.set.get(item.points) ?? 0) + 1);
+  tiers.set(item.category, entry);
 }
-for (const [category, set] of tiers) {
+for (const [category, { kind, set }] of tiers) {
+  const perTier = kind === "activity" ? 4 : 10;
+  const floor = perTier * 5;
   let total = 0;
   for (const tier of [100, 200, 300, 400, 500]) {
     const count = set.get(tier) ?? 0;
     total += count;
-    if (count < 1) throw new Error(`${category} has no ${tier}`);
+    if (count < perTier) throw new Error(`${category} has ${count} at ${tier}, need ${perTier}`);
   }
-  if (total < 50) throw new Error(`${category} has only ${total} questions`);
+  if (total < floor) throw new Error(`${category} has only ${total} items`);
 }
 
 const lost = bank.find((item) => item.id === 277);

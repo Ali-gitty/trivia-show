@@ -5,6 +5,7 @@ import { AudioLines, Eye, EyeOff, Pause, Play, Settings2 } from "lucide-react";
 import { CategoryLabel } from "@/lib/categoryIcons";
 import { speakArabic, visibleReading } from "@/lib/speech";
 import { facePoints, isQuestionPhase, powerEligible, stealEligible } from "@/lib/gameReducer";
+import { isActivity } from "@/lib/types";
 import { useGame } from "./GameProvider";
 import { useTv } from "./TvBridge";
 import { BuzzerPad } from "./BuzzerPad";
@@ -16,6 +17,7 @@ export function QuestionStage() {
   const { currentQuestion, dispatch, state, usePower } = useGame();
   const { live: tvLive } = useTv();
   const open = isQuestionPhase(state.phase) && currentQuestion;
+  const activity = currentQuestion ? isActivity(currentQuestion) : false;
   const tile = state.board.find((item) => item.id === state.currentTileId);
   const worth = facePoints(tile?.points ?? 0, state.pointMultiplier);
   const total = state.phase === "steal" ? state.settings.stealSeconds : state.settings.primarySeconds;
@@ -54,6 +56,7 @@ export function QuestionStage() {
                     <CategoryLabel category={tile.category} size={14} />
                   </span>
                   <span className="chip px-3 py-1">{worth}</span>
+                  {activity && <span className="chip px-3 py-1">فعالية · يحكم المقدم</span>}
                   {actor && <span className="chip px-3 py-1">يجيب: {actor.name}</span>}
                 </div>
                 {(state.phase === "primary" || state.phase === "steal") && (
@@ -102,25 +105,34 @@ export function QuestionStage() {
                 )}
                 <Button variant="ghost" onClick={() => dispatch({ type: "TOGGLE_PEEK" })}>
                   {state.hostPeek ? <EyeOff size={16} /> : <Eye size={16} />}
-                  معاينة الإجابة للمقدم
+                  {activity ? "معاينة المعيار للمقدم" : "معاينة الإجابة للمقدم"}
                 </Button>
               </div>
             </div>
 
-            <h2 className="text-3xl font-black leading-relaxed sm:text-4xl">{currentQuestion.question}</h2>
+            <h2 className={`font-black leading-relaxed ${activity ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl"}`}>
+              {currentQuestion.question}
+            </h2>
+            {activity && !state.answerRevealed && (
+              <p className="mt-3 text-sm text-muted">يؤدي الفريق التحدي، ثم يمنح المقدم النقاط حسب معيار التحكيم.</p>
+            )}
 
             {state.optionsVisible && <ChoiceGrid options={state.optionsOrder} />}
 
             {state.hostPeek && !state.answerRevealed && (
               <p className="mt-4 rounded-2xl border-[3px] border-dashed border-ink bg-paper px-4 py-3 text-sm">
-                {tvLive ? "ظاهرة على هذا الآيباد فقط" : "معاينة خاصة غير ظاهرة للجمهور"}:{" "}
-                <IsolatedText text={currentQuestion.answer} />
+                {tvLive
+                  ? "ظاهرة على هذا الآيباد فقط"
+                  : activity
+                    ? "معيار التحكيم، غير ظاهر للفرق"
+                    : "معاينة خاصة غير ظاهرة للجمهور"}
+                : <IsolatedText text={currentQuestion.answer} />
               </p>
             )}
 
             {state.answerRevealed && (
               <p className="answer-banner mt-4 px-4 py-3 font-black">
-                الإجابة: <IsolatedText text={currentQuestion.answer} />
+                {activity ? "معيار التحكيم" : "الإجابة"}: <IsolatedText text={currentQuestion.answer} />
               </p>
             )}
 
@@ -149,7 +161,7 @@ export function QuestionStage() {
 
             {state.phase === "adjudicate" && !state.answerRevealed && (
               <Button className="mt-5 h-12 w-full text-base" onClick={() => dispatch({ type: "REVEAL" })}>
-                كشف الإجابة
+                {activity ? "كشف معيار التحكيم" : "كشف الإجابة"}
               </Button>
             )}
 
