@@ -1,7 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Eye, EyeOff, Pause, Play } from "lucide-react";
+import { AudioLines, Eye, EyeOff, Pause, Play, Settings2 } from "lucide-react";
+import { speakArabic, visibleReading } from "@/lib/speech";
 import { facePoints, isQuestionPhase, powerEligible, stealEligible } from "@/lib/gameReducer";
 import { useGame } from "./GameProvider";
 import { useTv } from "./TvBridge";
@@ -50,10 +51,38 @@ export function QuestionStage() {
                 <span className="chip px-3 py-1">{worth}</span>
                 {actor && <span className="chip px-3 py-1">يجيب: {actor.name}</span>}
               </div>
-              <Button variant="ghost" onClick={() => dispatch({ type: "TOGGLE_PEEK" })}>
-                {state.hostPeek ? <EyeOff size={16} /> : <Eye size={16} />}
-                معاينة الإجابة للمقدم
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="ghost" onClick={() => dispatch({ type: "TOGGLE_SETTINGS" })}>
+                  <Settings2 size={16} />
+                  الإعدادات
+                </Button>
+                {state.settings.speech && (
+                  <Button
+                    variant="ghost"
+                    onClick={() =>
+                      speakArabic(
+                        visibleReading({
+                          question: currentQuestion.question,
+                          hint: currentQuestion.hint,
+                          options: state.optionsOrder,
+                          answer: currentQuestion.answer,
+                          hintVisible: state.hintVisible,
+                          optionsVisible: state.optionsVisible,
+                          answerRevealed: state.answerRevealed,
+                        }),
+                        state.settings.speechRate,
+                      )
+                    }
+                  >
+                    <AudioLines size={16} />
+                    اقرأ الآن
+                  </Button>
+                )}
+                <Button variant="ghost" onClick={() => dispatch({ type: "TOGGLE_PEEK" })}>
+                  {state.hostPeek ? <EyeOff size={16} /> : <Eye size={16} />}
+                  معاينة الإجابة للمقدم
+                </Button>
+              </div>
             </div>
 
             {(state.phase === "primary" || state.phase === "steal") && (

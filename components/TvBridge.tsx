@@ -61,11 +61,11 @@ export function TvBridge({ children }: { children: ReactNode }) {
   const linkRef = useRef<ReturnType<typeof openScreenLink> | null>(null);
   const seen = useRef(new Map<string, number>());
   const seq = useRef(0);
-  const latest = useRef({ state, question: currentQuestion, palette: theme.palette });
+  const latest = useRef({ state, question: currentQuestion, palette: theme.palette, pattern: theme.pattern });
 
   useEffect(() => {
-    latest.current = { state, question: currentQuestion, palette: theme.palette };
-  }, [currentQuestion, state, theme.palette]);
+    latest.current = { state, question: currentQuestion, palette: theme.palette, pattern: theme.pattern };
+  }, [currentQuestion, state, theme.palette, theme.pattern]);
 
   useEffect(() => {
     if (!live || !room) return;
@@ -80,7 +80,7 @@ export function TvBridge({ children }: { children: ReactNode }) {
       link.send({
         type: "state",
         seq: seq.current,
-        snap: buildSnapshot(current.state, current.question, current.palette),
+        snap: buildSnapshot(current.state, current.question, current.palette, current.pattern),
       });
     };
     publish();
@@ -112,9 +112,9 @@ export function TvBridge({ children }: { children: ReactNode }) {
     link.send({
       type: "state",
       seq: seq.current,
-      snap: buildSnapshot(state, currentQuestion, theme.palette),
+      snap: buildSnapshot(state, currentQuestion, theme.palette, theme.pattern),
     });
-  }, [currentQuestion, live, state, theme.palette]);
+  }, [currentQuestion, live, state, theme.palette, theme.pattern]);
 
   const url = room ? screenUrl(room) : "";
 

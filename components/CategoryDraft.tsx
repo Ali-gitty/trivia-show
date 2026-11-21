@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Dices, Search } from "lucide-react";
+import { Dices, Search, Settings2 } from "lucide-react";
 import { draftPlan } from "@/lib/gameReducer";
 import { useGame } from "./GameProvider";
 import { Button, Panel } from "./ui";
 
 export function CategoryDraft() {
-  const { categories, finishDraft, pickCategory, state } = useGame();
+  const { categories, dispatch, finishDraft, pickCategory, state } = useGame();
   const [query, setQuery] = useState("");
   const plan = draftPlan(state);
   const taken = new Set(state.draftPicks.map((pick) => pick.category));
@@ -38,10 +38,16 @@ export function CategoryDraft() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-5 px-4 py-8">
-      <header>
-        <p className="kicker">سحب الفئات</p>
-        <h1 className="mt-3 text-4xl font-black">{title}</h1>
-        <p className="mt-2 text-muted">{detail}</p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="kicker">سحب الفئات</p>
+          <h1 className="mt-3 text-4xl font-black">{title}</h1>
+          <p className="mt-2 text-muted">{detail}</p>
+        </div>
+        <Button variant="ghost" onClick={() => dispatch({ type: "TOGGLE_SETTINGS" })}>
+          <Settings2 size={16} />
+          الإعدادات
+        </Button>
       </header>
 
       <div className="flex flex-wrap gap-2">

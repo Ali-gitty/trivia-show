@@ -28,7 +28,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-const themeBoot = `try{var raw=localStorage.getItem("trivia.theme");var theme=raw?JSON.parse(raw):null;var ids=["kraft","candy","meadow","tide","comic"];var palette=theme&&ids.indexOf(theme.palette)>=0?theme.palette:"kraft";var root=document.documentElement;root.dataset.palette=palette;root.removeAttribute("data-mode");}catch(e){}`;
+const themeBoot = `try{var raw=localStorage.getItem("trivia.theme");var theme=raw?JSON.parse(raw):null;var ids=["kraft","candy","meadow","tide","comic"];var patterns=["dots","waves","halftone"];var palette=theme&&ids.indexOf(theme.palette)>=0?theme.palette:"kraft";var pattern=theme&&patterns.indexOf(theme.pattern)>=0?theme.pattern:"dots";var root=document.documentElement;root.dataset.palette=palette;root.dataset.pattern=pattern;root.removeAttribute("data-mode");}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -36,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="ar"
       dir="rtl"
       data-palette="kraft"
+      data-pattern="dots"
       className={`${cairo.variable} h-full`}
       suppressHydrationWarning
     >

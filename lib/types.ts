@@ -121,12 +121,22 @@ export type Outcome = {
 export type HostSettings = {
   primarySeconds: number;
   stealSeconds: number;
+  speech: boolean;
+  speechRate: number;
 };
 
 export const DEFAULT_HOST_SETTINGS: HostSettings = {
   primarySeconds: 60,
   stealSeconds: 15,
+  speech: false,
+  speechRate: 0.95,
 };
+
+export function clampSpeechRate(value: number) {
+  if (!Number.isFinite(value)) return DEFAULT_HOST_SETTINGS.speechRate;
+  const stepped = Math.round(value * 20) / 20;
+  return Math.min(1.35, Math.max(0.7, stepped));
+}
 
 export function clampTimerSeconds(value: number, min: number, max: number) {
   if (!Number.isFinite(value)) return min;
@@ -137,6 +147,8 @@ export function normalizeHostSettings(input: Partial<HostSettings> | null | unde
   return {
     primarySeconds: clampTimerSeconds(Number(input?.primarySeconds ?? DEFAULT_HOST_SETTINGS.primarySeconds), 10, 300),
     stealSeconds: clampTimerSeconds(Number(input?.stealSeconds ?? DEFAULT_HOST_SETTINGS.stealSeconds), 5, 120),
+    speech: input?.speech === true,
+    speechRate: clampSpeechRate(Number(input?.speechRate ?? DEFAULT_HOST_SETTINGS.speechRate)),
   };
 }
 

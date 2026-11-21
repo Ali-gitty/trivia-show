@@ -1,10 +1,10 @@
 "use client";
 
-import { PALETTES } from "@/lib/theme";
+import { PALETTES, PATTERNS } from "@/lib/theme";
 import { useTheme } from "./ThemeProvider";
 
 export function ThemePicker({ compact = false, embedded = false }: { compact?: boolean; embedded?: boolean }) {
-  const { setPalette, theme } = useTheme();
+  const { setPalette, setPattern, theme } = useTheme();
 
   const swatches = (
     <div className={compact ? "flex gap-1" : "grid grid-cols-2 gap-2 sm:grid-cols-5"} role="listbox" aria-label="لوحة الألوان">
@@ -33,11 +33,36 @@ export function ThemePicker({ compact = false, embedded = false }: { compact?: b
     </div>
   );
 
-  if (compact || embedded) {
+  const patterns = (
+    <div className="grid gap-2" role="listbox" aria-label="نقش الخلفية">
+      {PATTERNS.map((pattern) => {
+        const active = theme.pattern === pattern.id;
+        return (
+          <button
+            key={pattern.id}
+            type="button"
+            role="option"
+            aria-selected={active}
+            onClick={() => setPattern(pattern.id)}
+            className={`board-swatch ${active ? "board-swatch-on" : ""}`}
+          >
+            <span className={`pattern-swatch ${pattern.id === "dots" ? "" : `pattern-swatch-${pattern.id}`}`} />
+            <span>{pattern.name}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  if (compact) return swatches;
+
+  if (embedded) {
     return (
-      <div className="grid gap-3">
-        {embedded && <p className="text-sm text-muted">اختر لوحة ألوان للكرتون.</p>}
+      <div className="grid gap-4">
+        <p className="text-sm text-muted">اختر لوحة ألوان للكرتون.</p>
         {swatches}
+        <p className="text-sm text-muted">نقش الخلفية يتحرك بسلاسة. النقاط أخف، والموجات أنعم، والتظليل أقرب لطباعة القصص المصورة.</p>
+        {patterns}
       </div>
     );
   }

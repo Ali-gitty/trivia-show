@@ -30,6 +30,7 @@ export function TvStage() {
       currentSeq = message.seq;
       setSnap(message.snap);
       document.documentElement.dataset.palette = message.snap.palette;
+      document.documentElement.dataset.pattern = message.snap.pattern || "dots";
     });
     const id = viewerId();
     const beat = window.setInterval(() => {

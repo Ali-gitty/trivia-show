@@ -1,4 +1,6 @@
 import { gameReducer, createInitialState, powerEligible, unreachableLead } from "../lib/gameReducer";
+import { publicAnnouncement } from "../lib/speech";
+import { normalizeHostSettings } from "../lib/types";
 import type { Question } from "../lib/types";
 
 function question(id: number, category: string, points: Question["points"]): Question {
@@ -105,5 +107,28 @@ blown = gameReducer(blown, { type: "REVEAL" });
 const before = blown.teams[1].score;
 blown = gameReducer(blown, { type: "AWARD", teamIndex: 1 });
 if (blown.teams[1].score !== before + 1000) throw new Error("doubled award");
+
+const quiet = publicAnnouncement({
+  question: "ما السؤال؟",
+  hint: "تلميح سري",
+  options: ["أ", "ب"],
+  answer: "الإجابة السرية",
+  hintVisible: false,
+  optionsVisible: false,
+  answerRevealed: false,
+});
+if (quiet.text.includes("السرية") || quiet.key !== "question") throw new Error("speech leaked the answer");
+const aloud = publicAnnouncement({
+  question: "ما السؤال؟",
+  hint: "تلميح",
+  options: [],
+  answer: "الإجابة السرية",
+  hintVisible: false,
+  optionsVisible: false,
+  answerRevealed: true,
+});
+if (!aloud.text.includes("الإجابة السرية")) throw new Error("speech skipped the revealed answer");
+const kept = normalizeHostSettings({ primarySeconds: 40, speech: true, speechRate: 1.1 });
+if (!kept.speech || kept.speechRate !== 1.1 || kept.primarySeconds !== 40) throw new Error("settings dropped speech");
 
 console.log("reducer checks passed");

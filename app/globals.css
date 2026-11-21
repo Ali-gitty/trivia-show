@@ -111,43 +111,98 @@ body::before,
 body::after {
   content: "";
   position: fixed;
-  inset: 0;
   z-index: 0;
   pointer-events: none;
 }
 
 body::before {
+  inset: 0;
   background:
     radial-gradient(820px 420px at 100% -8%, var(--accent-wash), transparent 62%),
     radial-gradient(640px 360px at -10% 110%, var(--accent-wash), transparent 58%);
 }
 
 body::after {
-  background-image: radial-gradient(var(--dot) 1.35px, transparent 1.45px);
-  background-size: 14px 14px;
-  opacity: 0.9;
-  animation: dot-drift 18s linear infinite;
-  will-change: background-position;
+  inset: -220px;
+  background-image: radial-gradient(circle, var(--dot) 1.05px, transparent 1.75px);
+  background-size: 16px 16px;
+  opacity: 0.92;
+  --drift-x: -32px;
+  --drift-y: 16px;
+  animation: pattern-drift 6.5s linear infinite;
+  will-change: transform;
+}
+
+html[data-pattern="waves"] body::after {
+  background-image: none;
+  background-color: var(--dot);
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='64' viewBox='0 0 180 64'><path d='M0 18 Q15 4 30 18 T60 18 T90 18 T120 18 T150 18 T180 18' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'/><path d='M0 46 Q15 32 30 46 T60 46 T90 46 T120 46 T150 46 T180 46' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'/></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='64' viewBox='0 0 180 64'><path d='M0 18 Q15 4 30 18 T60 18 T90 18 T120 18 T150 18 T180 18' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'/><path d='M0 46 Q15 32 30 46 T60 46 T90 46 T120 46 T150 46 T180 46' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'/></svg>");
+  -webkit-mask-size: 180px 64px;
+  mask-size: 180px 64px;
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+  --drift-x: -180px;
+  --drift-y: 0px;
+  animation-duration: 12s;
+}
+
+html[data-pattern="halftone"] body::after {
+  background-color: transparent;
+  -webkit-mask-image: none;
+  mask-image: none;
+  background-image:
+    radial-gradient(circle, var(--dot) 1.7px, transparent 1.95px),
+    radial-gradient(circle, var(--dot) 0.85px, transparent 1.1px);
+  background-size: 14px 14px, 14px 14px;
+  background-position: 0 0, 7px 7px;
+  --drift-x: -28px;
+  --drift-y: 14px;
+  animation-duration: 6.5s;
 }
 
 @media (prefers-reduced-motion: reduce) {
   body::after {
     animation: none;
+    will-change: auto;
   }
 }
 
-@keyframes dot-drift {
-  0% {
-    background-position: 0 0;
+@keyframes pattern-drift {
+  from {
+    transform: translate3d(0, 0, 0);
   }
-  50% {
-    background-position: 14px 7px;
-    opacity: 0.72;
+  to {
+    transform: translate3d(var(--drift-x), var(--drift-y), 0);
   }
-  100% {
-    background-position: 28px 14px;
-    opacity: 0.9;
-  }
+}
+
+.pattern-swatch {
+  height: 2.6rem;
+  width: 4.4rem;
+  flex: none;
+  border: 2px solid var(--ink);
+  border-radius: 0.7rem;
+  background-color: var(--paper);
+  background-image: radial-gradient(circle, var(--dot) 1.05px, transparent 1.7px);
+  background-size: 8px 8px;
+}
+
+.pattern-swatch-waves {
+  background-image: none;
+  background-color: var(--dot);
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='28' viewBox='0 0 90 28'><path d='M0 8 Q8 2 15 8 T30 8 T45 8 T60 8 T75 8 T90 8' fill='none' stroke='black' stroke-width='1.6'/><path d='M0 20 Q8 14 15 20 T30 20 T45 20 T60 20 T75 20 T90 20' fill='none' stroke='black' stroke-width='1.6'/></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='28' viewBox='0 0 90 28'><path d='M0 8 Q8 2 15 8 T30 8 T45 8 T60 8 T75 8 T90 8' fill='none' stroke='black' stroke-width='1.6'/><path d='M0 20 Q8 14 15 20 T30 20 T45 20 T60 20 T75 20 T90 20' fill='none' stroke='black' stroke-width='1.6'/></svg>");
+  -webkit-mask-size: 90px 28px;
+  mask-size: 90px 28px;
+}
+
+.pattern-swatch-halftone {
+  background-image:
+    radial-gradient(circle, var(--dot) 1.5px, transparent 1.7px),
+    radial-gradient(circle, var(--dot) 0.7px, transparent 0.95px);
+  background-size: 8px 8px, 8px 8px;
+  background-position: 0 0, 4px 4px;
 }
 
 /* Unlayered rules beat Tailwind utilities. Keep this lift in the base

@@ -1,33 +1,29 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { DEFAULT_THEME, loadTheme, saveTheme, type ThemeChoice, type PaletteId } from "@/lib/theme";
+import { createContext, useContext, useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { applyTheme, DEFAULT_THEME, loadTheme, saveTheme, subscribeTheme, type PaletteId, type PatternId } from "@/lib/theme";
 
 type ThemeApi = {
-  theme: ThemeChoice;
+  theme: ReturnType<typeof loadTheme>;
   setPalette: (palette: PaletteId) => void;
+  setPattern: (pattern: PatternId) => void;
 };
 
 const ThemeContext = createContext<ThemeApi | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<ThemeChoice>(DEFAULT_THEME);
+  const theme = useSyncExternalStore(subscribeTheme, loadTheme, () => DEFAULT_THEME);
 
   useEffect(() => {
-    const saved = loadTheme();
-    setTheme(saved);
-    saveTheme(saved);
-  }, []);
+    applyTheme(theme);
+  }, [theme]);
 
   return (
     <ThemeContext.Provider
       value={{
         theme,
-        setPalette: (palette) => {
-          const next = { palette };
-          setTheme(next);
-          saveTheme(next);
-        },
+        setPalette: (palette) => saveTheme({ ...theme, palette }),
+        setPattern: (pattern) => saveTheme({ ...theme, pattern }),
       }}
     >
       {children}

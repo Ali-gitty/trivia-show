@@ -12,6 +12,7 @@ import { QuestionStage } from "./QuestionStage";
 import { ScoreEditor } from "./ScoreEditor";
 import { Scoreboard } from "./Scoreboard";
 import { SettingsModal } from "./SettingsModal";
+import { SpeechDirector } from "./SpeechDirector";
 import { SetupLobby } from "./SetupLobby";
 import { LeadNotice } from "./LeadNotice";
 import { TvBridge } from "./TvBridge";
@@ -52,6 +53,7 @@ export function Arena() {
       )}
       <HostPanel />
       <QuestionBankModal />
+      <SpeechDirector />
       <SettingsModal />
       <ScoreEditor />
       <LeadNotice />

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Settings2, Tv } from "lucide-react";
+import { PanelLeft, Settings2, Tv } from "lucide-react";
 import { isQuestionPhase } from "@/lib/gameReducer";
 import { useGame } from "./GameProvider";
 import { useTv } from "./TvBridge";
@@ -56,11 +56,19 @@ export function Scoreboard() {
         </button>
         <button
           type="button"
+          onClick={() => dispatch({ type: "TOGGLE_SETTINGS" })}
+          className="board-btn board-btn-ghost px-3 py-3 text-sm"
+        >
+          <Settings2 size={18} />
+          الإعدادات
+        </button>
+        <button
+          type="button"
           onClick={() => dispatch({ type: "TOGGLE_HOST" })}
           className="board-btn board-btn-ghost px-3 py-3"
           aria-label="لوحة المقدم"
         >
-          <Settings2 size={18} />
+          <PanelLeft size={18} />
         </button>
       </div>
     </div>

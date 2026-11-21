@@ -1,5 +1,5 @@
 import { draftPlan, facePoints, isQuestionPhase } from "./gameReducer";
-import { PALETTES, type PaletteId } from "./theme";
+import { PALETTES, PATTERNS, type PaletteId, type PatternId } from "./theme";
 import type { GameState, Outcome, Phase, Question, SoundName } from "./types";
 
 export type ScreenTeam = {
@@ -30,6 +30,7 @@ export type ScreenSnapshot = {
   phase: Phase;
   mode: GameState["mode"];
   palette: PaletteId;
+  pattern: PatternId;
   teams: ScreenTeam[];
   activeTeamIndex: number;
   draftPicks: GameState["draftPicks"];
@@ -49,11 +50,13 @@ export type ScreenSnapshot = {
 };
 
 const paletteIds = new Set<string>(PALETTES.map((palette) => palette.id));
+const patternIds = new Set<string>(PATTERNS.map((pattern) => pattern.id));
 
 export function buildSnapshot(
   state: GameState,
   question: Question | null,
   palette: string,
+  pattern = "dots",
 ): ScreenSnapshot {
   const plan = draftPlan(state);
   const draftLabel = !plan
@@ -67,6 +70,7 @@ export function buildSnapshot(
     phase: state.phase,
     mode: state.mode,
     palette: paletteIds.has(palette) ? (palette as PaletteId) : "kraft",
+    pattern: patternIds.has(pattern) ? (pattern as PatternId) : "dots",
     teams: state.teams.map((team) => ({
       id: team.id,
       name: team.name,

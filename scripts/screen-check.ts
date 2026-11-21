@@ -45,9 +45,11 @@ const raw = JSON.stringify(hidden);
 if (raw.includes(secret) || raw.includes(hint) || raw.includes("hostPeek")) {
   throw new Error(`secret leaked: ${raw}`);
 }
-if (hidden.question?.prompt !== question.question || hidden.question.answer !== null) {
+if (hidden.question?.prompt !== question.question || hidden.question.answer !== null || hidden.pattern !== "dots") {
   throw new Error("public prompt missing");
 }
+const waved = buildSnapshot(state, question, "kraft", "waves");
+if (waved.pattern !== "waves") throw new Error("pattern was dropped");
 
 state = { ...state, hintVisible: true, optionsVisible: true, optionsOrder: [...question.options], answerRevealed: true };
 const shown = buildSnapshot(state, question, "tide");
