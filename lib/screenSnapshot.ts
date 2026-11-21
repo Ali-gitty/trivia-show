@@ -21,7 +21,7 @@ export type ScreenQuestion = {
   points: number;
   prompt: string;
   activity: boolean;
-  hint: string | null;
+  hostAsk: boolean;
   options: string[] | null;
   answer: string | null;
 };
@@ -102,7 +102,7 @@ export function buildSnapshot(
           points: question.points,
           prompt: question.question,
           activity: question.kind === "activity",
-          hint: state.hintVisible ? question.hint : null,
+          hostAsk: state.hostAskOpen,
           options: state.optionsVisible ? [...state.optionsOrder] : null,
           answer: state.answerRevealed ? question.answer : null,
         }

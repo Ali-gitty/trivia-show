@@ -266,7 +266,11 @@ function QuestionCard({ snap }: { snap: ScreenSnapshot }) {
           </div>
         )}
         <h2 className="text-3xl font-black leading-relaxed sm:text-5xl">{question.prompt}</h2>
-        {question.hint && <p className="note-ok mt-4 px-4 py-3">تلميح للجميع: {question.hint}</p>}
+        {question.hostAsk && (
+          <p className="note-ok mt-4 px-4 py-3 font-bold">
+            يحق للفريق سؤال المقدم مرة واحدة. على المقدم أن يجيب بصراحة.
+          </p>
+        )}
         {question.options && <ChoiceGrid options={question.options} />}
         {question.answer ? (
           <p className="answer-banner mt-4 px-4 py-3 text-2xl font-black">

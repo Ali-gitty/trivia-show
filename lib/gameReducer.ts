@@ -13,10 +13,18 @@ import {
   type Question,
   type SoundName,
   type Team,
+  type TeamPowerKind,
 } from "./types";
 
 const BASE_COOLDOWN = 3;
+const SKIP_COOLDOWN = 10;
 const STEAL_COOLDOWN = 5;
+
+function cooldownFor(kind: PowerKind) {
+  if (kind === "skip") return SKIP_COOLDOWN;
+  if (kind === "steal") return STEAL_COOLDOWN;
+  return BASE_COOLDOWN;
+}
 
 export type Action =
   | { type: "HYDRATE"; state: GameState }
@@ -40,7 +48,7 @@ export type Action =
   | { type: "PAUSE" }
   | { type: "RESUME" }
   | { type: "LOCK" }
-  | { type: "USE_POWER"; teamIndex: number; kind: "hint" | "choice" | "skip"; options?: string[] }
+  | { type: "USE_POWER"; teamIndex: number; kind: TeamPowerKind; options?: string[] }
   | { type: "BUZZ"; teamIndex: number }
   | { type: "STEAL"; teamIndex: number }
   | { type: "REVEAL" }
@@ -72,7 +80,7 @@ export function createInitialState(): GameState {
     timerPaused: false,
     buzzingTeamIndex: null,
     lockedOutTeamIds: [],
-    hintVisible: false,
+    hostAskOpen: false,
     optionsVisible: false,
     optionsOrder: [],
     answerRevealed: false,
@@ -164,7 +172,7 @@ function questionFields() {
     timerPaused: false,
     buzzingTeamIndex: null,
     lockedOutTeamIds: [] as string[],
-    hintVisible: false,
+    hostAskOpen: false,
     optionsVisible: false,
     optionsOrder: [] as string[],
     answerRevealed: false,
@@ -178,9 +186,9 @@ function questionFields() {
 function decay(teams: Team[], used: GameState["usedThisQuestion"]) {
   return teams.map((team, index) => {
     const cooldowns = { ...team.cooldowns };
-    (["hint", "choice", "skip", "steal"] as const).forEach((kind) => {
+    (["ask", "choice", "skip", "steal"] as const).forEach((kind) => {
       const spent = used.some((use) => use.teamIndex === index && use.kind === kind);
-      if (spent) cooldowns[kind] = kind === "steal" ? STEAL_COOLDOWN : BASE_COOLDOWN;
+      if (spent) cooldowns[kind] = cooldownFor(kind);
       else cooldowns[kind] = Math.max(0, cooldowns[kind] - 1);
     });
     return { ...team, cooldowns };
@@ -217,7 +225,7 @@ function spend(state: GameState, teamIndex: number, kind: PowerKind): GameState 
             ...team,
             cooldowns: {
               ...team.cooldowns,
-              [kind]: kind === "steal" ? STEAL_COOLDOWN : BASE_COOLDOWN,
+              [kind]: cooldownFor(kind),
             },
           }
         : team,
@@ -240,7 +248,7 @@ function startBoard(state: GameState, questions: Question[], playedIds: number[]
   };
 }
 
-function livePower(state: GameState, teamIndex: number, kind: "hint" | "choice" | "skip") {
+function livePower(state: GameState, teamIndex: number, kind: TeamPowerKind) {
   const team = state.teams[teamIndex];
   if (!team || team.cooldowns[kind] > 0) return false;
   const live =
@@ -468,9 +476,9 @@ export function gameReducer(state: GameState, action: Action): GameState {
       return state;
     case "USE_POWER": {
       if (!livePower(state, action.teamIndex, action.kind)) return state;
-      if (action.kind === "hint") {
-        if (state.hintVisible) return state;
-        return { ...spend(state, action.teamIndex, "hint"), hintVisible: true, cue: sound(state, "power") };
+      if (action.kind === "ask") {
+        if (state.hostAskOpen) return state;
+        return { ...spend(state, action.teamIndex, "ask"), hostAskOpen: true, cue: sound(state, "power") };
       }
       if (action.kind === "choice") {
         if (state.optionsVisible || !action.options?.length) return state;
