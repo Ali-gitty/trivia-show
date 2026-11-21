@@ -1,5 +1,6 @@
 export type RawQuestion = {
   id: number;
+  kind?: "trivia" | "activity";
   category: string;
   points: number;
   question: string;

@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { Dices, Search } from "lucide-react";
+import { categoryKind } from "@/lib/board";
 import { draftPlan } from "@/lib/gameReducer";
 import { useGame } from "./GameProvider";
 import { Button, Panel } from "./ui";
 
 export function CategoryDraft() {
-  const { categories, finishDraft, pickCategory, state } = useGame();
+  const { bank, categories, finishDraft, pickCategory, state } = useGame();
   const [query, setQuery] = useState("");
   const plan = draftPlan(state);
   const taken = new Set(state.draftPicks.map((pick) => pick.category));
@@ -91,6 +92,9 @@ export function CategoryDraft() {
               style={pick?.teamIndex != null ? { borderColor: state.teams[pick.teamIndex]?.color } : undefined}
             >
               {category}
+              {categoryKind(bank, category) === "activity" && (
+                <span className="mt-1 block text-[11px] font-medium text-accent">فعالية</span>
+              )}
               {pick && (
                 <span className="mt-1 block text-xs font-medium text-muted">
                   {pick.teamIndex == null ? "اختيار المقدم" : state.teams[pick.teamIndex]?.name}

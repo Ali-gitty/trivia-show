@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, EyeOff, Pause, Play } from "lucide-react";
 import { isQuestionPhase, powerEligible, stealEligible } from "@/lib/gameReducer";
+import { isActivity } from "@/lib/types";
 import { useGame } from "./GameProvider";
 import { BuzzerPad } from "./BuzzerPad";
 import { PowerUpBar } from "./PowerUpBar";
@@ -19,6 +20,7 @@ export function QuestionStage() {
       : state.phase === "steal"
         ? state.teams[state.activeTeamIndex === 0 ? 1 : 0]
         : null;
+  const activity = currentQuestion ? isActivity(currentQuestion) : false;
   const allLocked =
     state.mode === "buzzer" &&
     state.teams.length > 0 &&
@@ -45,11 +47,12 @@ export function QuestionStage() {
               <div className="flex flex-wrap gap-2 text-sm">
                 <span className="chip chip-accent px-3 py-1">{tile.category}</span>
                 <span className="chip px-3 py-1">{tile.points}</span>
+                {activity && <span className="chip px-3 py-1">فعالية · يحكم المقدم</span>}
                 {actor && <span className="chip px-3 py-1">يجيب: {actor.name}</span>}
               </div>
               <Button variant="ghost" onClick={() => dispatch({ type: "TOGGLE_PEEK" })}>
                 {state.hostPeek ? <EyeOff size={16} /> : <Eye size={16} />}
-                معاينة الإجابة للمقدم
+                {activity ? "معاينة المعيار للمقدم" : "معاينة الإجابة للمقدم"}
               </Button>
             </div>
 
@@ -72,7 +75,12 @@ export function QuestionStage() {
               </div>
             )}
 
-            <h2 className="text-3xl font-black leading-relaxed sm:text-4xl">{currentQuestion.question}</h2>
+            <h2 className={`font-black leading-relaxed ${activity ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl"}`}>
+              {currentQuestion.question}
+            </h2>
+            {activity && !state.answerRevealed && (
+              <p className="mt-3 text-sm text-muted">يؤدي الفريق التحدي، ثم يمنح المقدم النقاط حسب معيار التحكيم.</p>
+            )}
 
             {state.hintVisible && (
               <p className="note-ok mt-4 px-4 py-3">
@@ -93,13 +101,13 @@ export function QuestionStage() {
 
             {state.hostPeek && !state.answerRevealed && (
               <p className="mt-4 rounded-2xl border-[3px] border-dashed border-ink bg-paper px-4 py-3 text-sm">
-                معاينة خاصة غير ظاهرة للجمهور: {currentQuestion.answer}
+                {activity ? "معيار التحكيم، غير ظاهر للفرق" : "معاينة خاصة غير ظاهرة للجمهور"}: {currentQuestion.answer}
               </p>
             )}
 
             {state.answerRevealed && (
               <p className="answer-banner mt-4 px-4 py-3 font-black">
-                الإجابة: {currentQuestion.answer}
+                {activity ? "معيار التحكيم" : "الإجابة"}: {currentQuestion.answer}
               </p>
             )}
 
@@ -128,7 +136,7 @@ export function QuestionStage() {
 
             {state.phase === "adjudicate" && !state.answerRevealed && (
               <Button className="mt-5 h-12 w-full text-base" onClick={() => dispatch({ type: "REVEAL" })}>
-                كشف الإجابة
+                {activity ? "كشف معيار التحكيم" : "كشف الإجابة"}
               </Button>
             )}
 

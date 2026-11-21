@@ -86,4 +86,41 @@ multi = gameReducer(multi, { type: "BUZZ", teamIndex: 2 });
 multi = gameReducer(multi, { type: "BUZZ_CORRECT" });
 if (multi.teams[2].score !== 500 || multi.phase !== "resolved") throw new Error("correct");
 
+const activityQuestions = [
+  ...questions,
+  ...([100, 200, 300, 400, 500] as const).map((points, index) => ({
+    id: 900 + index,
+    kind: "activity" as const,
+    category: "ارسم المشهد",
+    points,
+    question: "ارسم سفينة",
+    answer: "أن يخمن الفريق السفينة",
+    hint: "تلميح",
+    options: ["سفينة", "طائرة", "قطار", "سيارة"] as [string, string, string, string],
+  })),
+];
+let activity = gameReducer(createInitialState(), {
+  type: "START_DRAFT",
+  mode: "classic",
+  teams: [
+    { name: "الأول", color: "#22d3ee" },
+    { name: "الثاني", color: "#fb923c" },
+  ],
+});
+for (const category of ["ارسم المشهد", ...categories.slice(0, 4)]) {
+  activity = gameReducer(activity, {
+    type: "PICK_CATEGORY",
+    category,
+    questions: activityQuestions,
+    playedIds: [],
+  });
+}
+const activityTile = activity.board.find((item) => item.category === "ارسم المشهد" && item.points === 100);
+if (!activityTile) throw new Error("activity tile missing");
+activity = gameReducer(activity, { type: "OPEN_TILE", tileId: activityTile.id, questions: activityQuestions });
+if (activity.phase !== "adjudicate" || activity.timerRunning) throw new Error("activity should open for host judgment");
+activity = gameReducer(activity, { type: "REVEAL" });
+activity = gameReducer(activity, { type: "AWARD", teamIndex: 1 });
+if (activity.teams[1].score !== 100 || activity.phase !== "board") throw new Error("activity award");
+
 console.log("reducer checks passed");

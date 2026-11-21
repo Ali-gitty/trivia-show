@@ -182,7 +182,7 @@ export function QuestionBankModal() {
                     }`}
                   >
                     <span className="text-xs font-bold text-accent">
-                      {question.id} · {question.category} · {question.points}
+                      {question.id} · {question.kind === "activity" ? "فعالية" : "سؤال"} · {question.category} · {question.points}
                     </span>
                     <span className="mt-1 block text-sm">{question.question}</span>
                   </button>
