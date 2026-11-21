@@ -1,16 +1,23 @@
 "use client";
 
-import { Dices } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Dices, Search } from "lucide-react";
 import { draftPlan } from "@/lib/gameReducer";
 import { useGame } from "./GameProvider";
 import { Button, Panel } from "./ui";
 
 export function CategoryDraft() {
   const { categories, finishDraft, pickCategory, state } = useGame();
+  const [query, setQuery] = useState("");
   const plan = draftPlan(state);
   const taken = new Set(state.draftPicks.map((pick) => pick.category));
   const hostTurn = plan?.teamIndex == null;
   const remaining = categories.filter((category) => !taken.has(category));
+  const needle = query.trim();
+  const visible = useMemo(
+    () => categories.filter((category) => !needle || category.includes(needle)),
+    [categories, needle],
+  );
 
   const title = !plan
     ? "اكتمل السحب"
@@ -56,12 +63,23 @@ export function CategoryDraft() {
         </span>
       </div>
 
+      <label className="field flex items-center gap-2 px-3">
+        <Search size={16} />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="ابحث عن فئة"
+          className="w-full bg-transparent py-2.5 outline-none"
+          aria-label="بحث في الفئات"
+        />
+      </label>
+
       {state.draftError && (
         <p className="note-danger px-4 py-3 text-sm">{state.draftError}</p>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        {categories.map((category) => {
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        {visible.map((category) => {
           const pick = state.draftPicks.find((item) => item.category === category);
           return (
             <button
@@ -69,7 +87,7 @@ export function CategoryDraft() {
               type="button"
               disabled={Boolean(pick) || (state.mode === "buzzer" && hostTurn && state.draftPicks.length >= 7)}
               onClick={() => pickCategory(category)}
-              className="board-card px-4 py-4 text-right font-bold disabled:cursor-not-allowed disabled:opacity-40"
+              className="board-card min-h-16 px-3 py-3 text-sm font-black leading-5 disabled:cursor-not-allowed disabled:opacity-40"
               style={pick?.teamIndex != null ? { borderColor: state.teams[pick.teamIndex]?.color } : undefined}
             >
               {category}
@@ -83,6 +101,9 @@ export function CategoryDraft() {
         })}
       </div>
       {categories.length === 0 && <p className="note-danger px-4 py-3 text-sm">لا توجد فئات في البنك.</p>}
+      {categories.length > 0 && visible.length === 0 && (
+        <p className="text-sm text-muted">لا توجد فئة بهذا الاسم.</p>
+      )}
 
       <Panel className="flex flex-wrap items-center gap-3 p-4">
         {hostTurn && (
