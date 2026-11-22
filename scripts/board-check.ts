@@ -44,6 +44,13 @@ const built = buildBoard(
 if (built.error || built.board.length !== 5) throw new Error(built.error ?? "board size");
 if (built.board.some((tile) => tile.questionId !== 0)) throw new Error("board must defer question picks");
 
+const sparse = buildBoard(["تجربة"], [question(20, 300), question(21, 500)], [], [100, 200, 300, 400, 500], {
+  allowMissingTiers: true,
+});
+if (sparse.error || sparse.board.length !== 5) throw new Error(sparse.error ?? "sparse board");
+const blocked = buildBoard(["تجربة"], [question(20, 300), question(21, 500)], [], [100, 200, 300, 400, 500]);
+if (!blocked.error) throw new Error("missing tiers should fail without allowMissingTiers");
+
 const many = Array.from({ length: 40 }, (_, index) => question(100 + index, 100));
 const draws = new Set<number>();
 for (let round = 0; round < 40; round += 1) {

@@ -4,16 +4,18 @@ import { useState } from "react";
 import { Eye, RotateCcw, Settings2, Tv, Volume2, VolumeX, X } from "lucide-react";
 import { useTv } from "./TvBridge";
 import { isQuestionPhase } from "@/lib/gameReducer";
-import type { PowerKind } from "@/lib/types";
+import { teamPowerKindsForMode, type PowerKind } from "@/lib/types";
 import { useGame } from "./GameProvider";
 import { Button } from "./ui";
 
-const powers: { kind: PowerKind; label: string }[] = [
-  { kind: "time", label: "وقت+" },
-  { kind: "choice", label: "خيارات" },
-  { kind: "skip", label: "تخطي" },
-  { kind: "steal", label: "سرقة" },
-];
+const powerLabels: Record<PowerKind, string> = {
+  time: "وقت+",
+  choice: "خيارات",
+  range: "نطاق",
+  cut: "حذف2",
+  skip: "تخطي",
+  steal: "سرقة",
+};
 
 const dock = {
   bottom: "max(0.75rem, env(safe-area-inset-bottom))",
@@ -27,7 +29,10 @@ export function HostPanel() {
   const [names, setNames] = useState<Record<string, string>>({});
   if (!state.hostPanelOpen || state.phase === "lobby") return null;
   const timing = state.phase === "primary" || state.phase === "steal";
-  const teamPowers = powers.filter((power) => state.mode === "buzzer" || power.kind !== "steal");
+  const teamPowers: { kind: PowerKind; label: string }[] = [
+    ...teamPowerKindsForMode(state.mode).map((kind) => ({ kind, label: powerLabels[kind] })),
+    ...(state.mode === "buzzer" ? [{ kind: "steal" as const, label: powerLabels.steal }] : []),
+  ];
 
   return (
     <aside

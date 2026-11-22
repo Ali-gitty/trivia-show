@@ -5,6 +5,7 @@ import { AudioLines, Eye, EyeOff, Pause, Play, Settings2 } from "lucide-react";
 import { CategoryLabel } from "@/lib/categoryIcons";
 import { speakArabic, visibleReading } from "@/lib/speech";
 import { facePoints, isQuestionPhase, powerEligible, stealEligible } from "@/lib/gameReducer";
+import { formatAnswerRange } from "@/lib/numberRange";
 import { isActivity } from "@/lib/types";
 import { useGame } from "./GameProvider";
 import { useTv } from "./TvBridge";
@@ -116,6 +117,17 @@ export function QuestionStage() {
                 يؤدي الفريق التحدي، ثم يمنح المقدم النقاط حسب معيار التحكيم.
               </p>
             )}
+            {state.mode === "closest" && !state.answerRevealed && (
+              <p className="shrink-0 text-xs text-muted sm:text-sm">
+                أقرب رقم صحيح يفوز — الفرق تخمّن، والمقدم يحكم بعد كشف الإجابة.
+              </p>
+            )}
+
+            {state.rangeVisible && state.rangeLow != null && state.rangeHigh != null && (
+              <p className="note-ok shrink-0 px-3 py-2 text-sm font-bold">
+                النطاق التقريبي: {formatAnswerRange(state.rangeLow, state.rangeHigh)}
+              </p>
+            )}
 
             {state.optionsVisible && <ChoiceGrid options={state.optionsOrder} compact />}
 
@@ -146,7 +158,10 @@ export function QuestionStage() {
                 teams={state.teams}
                 eligible={powerEligible(state)}
                 phase={state.phase}
+                mode={state.mode}
                 optionsVisible={state.optionsVisible}
+                rangeVisible={state.rangeVisible}
+                optionsCount={state.optionsOrder.length}
                 onUse={usePower}
               />
             </div>
@@ -168,11 +183,13 @@ export function QuestionStage() {
                 <div className="grid gap-2 sm:grid-cols-3">
                   {state.teams.slice(0, 2).map((team, index) => (
                     <Button key={team.id} onClick={() => dispatch({ type: "AWARD", teamIndex: index })}>
-                      نقاط لـ {team.name} (+{worth})
+                      {state.mode === "closest"
+                        ? `الأقرب: ${team.name} (+${worth})`
+                        : `نقاط لـ ${team.name} (+${worth})`}
                     </Button>
                   ))}
                   <Button variant="danger" onClick={() => dispatch({ type: "AWARD", teamIndex: null })}>
-                    لا أحد / إجابة خاطئة (0)
+                    {state.mode === "closest" ? "تعادل / لا أحد (0)" : "لا أحد / إجابة خاطئة (0)"}
                   </Button>
                 </div>
               )}

@@ -5,18 +5,23 @@ import { BookOpen, RotateCcw, Settings2, Tv, Users, Volume2, VolumeX } from "luc
 import { useTv } from "./TvBridge";
 import { useGame } from "./GameProvider";
 import { Button, Panel } from "./ui";
+import { categoriesForMode } from "@/lib/modeBank";
 import { MATCH_FORMATS, matchFormatOf, type MatchFormatId } from "@/lib/matchFormat";
 import { MAX_BUZZER_CATEGORIES, POINT_VALUES, TEAM_COLORS, TEAM_NAMES, type GameMode, type Points } from "@/lib/types";
 
 export function SetupLobby() {
-  const { categories, dispatch, playedIds, resetPlayed, startDraft, state, toggleMute } = useGame();
+  const { bank, dispatch, playedIds, resetPlayed, startDraft, state, toggleMute } = useGame();
   const { openLink } = useTv();
   const [mode, setMode] = useState<GameMode>("classic");
   const [count, setCount] = useState(3);
   const format = state.settings.format;
   const formatDef = matchFormatOf(format);
-  const teamCount = mode === "classic" ? 2 : count;
+  const teamCount = mode === "buzzer" ? count : 2;
   const categoryNeed = state.settings.categoryCount;
+  const categories = useMemo(
+    () => categoriesForMode(bank, mode, state.settings.pointTiers),
+    [bank, mode, state.settings.pointTiers],
+  );
   const [names, setNames] = useState<string[]>([...TEAM_NAMES]);
   const [colors, setColors] = useState<string[]>([...TEAM_COLORS]);
 
@@ -98,6 +103,18 @@ export function SetupLobby() {
           title="وضع الفرق المتعددة والجرس"
           detail="من 2 إلى 7 فرق. الجرس يفتح فوراً، والإجابة الخاطئة تخصم نصف قيمة السؤال."
           onClick={() => setMode("buzzer")}
+        />
+        <ModeCard
+          active={mode === "closest"}
+          title="سباق الأرقام (الأقرب يفوز)"
+          detail="أسئلة رقمية فقط. بدون خيارات متعددة — بديلها قدرة «نطاق تقريبي». المقدم يحكم لمن الأقرب."
+          onClick={() => setMode("closest")}
+        />
+        <ModeCard
+          active={mode === "choices"}
+          title="وضع الاختيارات المتعددة"
+          detail="الخيارات الأربعة ظاهرة من البداية. قدرة «احذف خيارين» تبقي الإجابة الصحيحة وخياراً خاطئاً واحداً."
+          onClick={() => setMode("choices")}
         />
       </div>
 
