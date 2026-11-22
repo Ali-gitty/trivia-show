@@ -24,6 +24,7 @@ let state = gameReducer(createInitialState(), {
     { name: "ب", color: "#fb923c" },
   ],
 });
+state = gameReducer(state, { type: "BEGIN_DRAFT" });
 
 state = gameReducer(state, {
   type: "PLAYER_JOIN",
@@ -145,6 +146,7 @@ let buzz = gameReducer(createInitialState(), {
     { name: "ب", color: "#fb923c" },
   ],
 });
+buzz = gameReducer(buzz, { type: "BEGIN_DRAFT" });
 buzz = gameReducer(buzz, {
   type: "PLAYER_JOIN",
   playerId: "a1",

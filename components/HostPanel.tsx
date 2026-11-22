@@ -27,7 +27,7 @@ export function HostPanel() {
   const { live, openLink, viewers } = useTv();
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [names, setNames] = useState<Record<string, string>>({});
-  if (!state.hostPanelOpen || state.phase === "lobby") return null;
+  if (!state.hostPanelOpen || state.phase === "lobby" || state.phase === "connect") return null;
   const timing = state.phase === "primary" || state.phase === "steal";
   const teamPowers: { kind: PowerKind; label: string }[] = [
     ...teamPowerKindsForMode(state.mode).map((kind) => ({ kind, label: powerLabels[kind] })),

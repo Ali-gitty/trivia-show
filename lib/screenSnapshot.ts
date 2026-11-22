@@ -10,6 +10,14 @@ export type ScreenTeam = {
   score: number;
 };
 
+export type ScreenPlayer = {
+  id: string;
+  name: string;
+  teamId: string;
+  isLeader: boolean;
+  connected: boolean;
+};
+
 export type ScreenTile = {
   id: string;
   category: string;
@@ -33,6 +41,7 @@ export type ScreenSnapshot = {
   palette: PaletteId;
   pattern: PatternId;
   teams: ScreenTeam[];
+  players: ScreenPlayer[];
   activeTeamIndex: number;
   draftPicks: GameState["draftPicks"];
   draftLabel: string;
@@ -78,6 +87,13 @@ export function buildSnapshot(
       color: team.color,
       score: team.score,
     })),
+    players: state.players.map((player) => ({
+      id: player.id,
+      name: player.name,
+      teamId: player.teamId,
+      isLeader: player.isLeader,
+      connected: player.connected,
+    })),
     activeTeamIndex: state.activeTeamIndex,
     draftPicks: state.draftPicks.map((pick) => ({ ...pick })),
     draftLabel,
@@ -121,5 +137,10 @@ export function snapshotSecrets(snapshot: ScreenSnapshot) {
 export function isSnapshot(value: unknown): value is ScreenSnapshot {
   if (!value || typeof value !== "object") return false;
   const snapshot = value as ScreenSnapshot;
-  return typeof snapshot.phase === "string" && Array.isArray(snapshot.teams) && Array.isArray(snapshot.board);
+  return (
+    typeof snapshot.phase === "string" &&
+    Array.isArray(snapshot.teams) &&
+    Array.isArray(snapshot.players) &&
+    Array.isArray(snapshot.board)
+  );
 }

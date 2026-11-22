@@ -3,6 +3,7 @@
 import { MotionConfig } from "framer-motion";
 import { isQuestionPhase } from "@/lib/gameReducer";
 import { CategoryDraft } from "./CategoryDraft";
+import { ConnectPlayers } from "./ConnectPlayers";
 import { GameBoard } from "./GameBoard";
 import { useGame } from "./GameProvider";
 import { HostPanel, hostDock } from "./HostPanel";
@@ -32,6 +33,7 @@ export function Arena() {
     <TvBridge>
     <MotionConfig reducedMotion="user">
       {state.phase === "lobby" && <SetupLobby />}
+      {state.phase === "connect" && <ConnectPlayers />}
       {state.phase === "draft" && <CategoryDraft />}
       {match && state.phase !== "podium" && (
         <>
@@ -41,7 +43,7 @@ export function Arena() {
         </>
       )}
       {state.phase === "podium" && <Podium />}
-      {state.phase !== "lobby" && !state.hostPanelOpen && (
+      {state.phase !== "lobby" && state.phase !== "connect" && !state.hostPanelOpen && (
         <button
           type="button"
           onClick={() => dispatch({ type: "TOGGLE_HOST" })}

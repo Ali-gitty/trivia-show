@@ -124,26 +124,30 @@ export function TvBridge({ children }: { children: ReactNode }) {
   const phones = room ? playUrl(room) : "";
   const connectedPlayers = state.players.filter((player) => player.connected).length;
 
-  const openLink = useCallback(() => {
+  const armRoom = useCallback(() => {
     const next = room || createRoomCode();
     sessionStorage.setItem(STORAGE.screenRoom, next);
     sessionStorage.setItem(STORAGE.screenLive, "1");
     notifyScreen();
-    setOpen(true);
     setBlocked(false);
   }, [room]);
 
-  const draftQrShown = useRef(false);
-  // Show connect QR once when the match enters category draft (after mode start).
+  const openLink = useCallback(() => {
+    armRoom();
+    setOpen(true);
+  }, [armRoom]);
+
+  const connectQrArmed = useRef(false);
+  // Arm room for connect-tab QR without covering the page in a modal.
   useEffect(() => {
-    if (state.phase !== "draft") {
-      draftQrShown.current = false;
+    if (state.phase !== "connect") {
+      connectQrArmed.current = false;
       return;
     }
-    if (draftQrShown.current) return;
-    draftQrShown.current = true;
-    openLink();
-  }, [openLink, state.phase]);
+    if (connectQrArmed.current) return;
+    connectQrArmed.current = true;
+    armRoom();
+  }, [armRoom, state.phase]);
 
   const stop = () => {
     sessionStorage.removeItem(STORAGE.screenLive);

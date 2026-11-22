@@ -45,6 +45,7 @@ export type Action =
   | { type: "TOGGLE_SETTINGS" }
   | { type: "OPEN_SCORE"; teamId: string | null }
   | { type: "START_DRAFT"; mode: GameState["mode"]; teams: { name: string; color: string }[] }
+  | { type: "BEGIN_DRAFT" }
   | { type: "PICK_CATEGORY"; category: string; questions: Question[]; playedIds: number[] }
   | { type: "FINISH_DRAFT"; questions: Question[]; playedIds: number[] }
   | { type: "OPEN_TILE"; tileId: string; questions: Question[]; playedIds: number[] }
@@ -411,7 +412,14 @@ export function unreachableLead(state: {
   board: { points: number; status: "open" | "played" | "skipped" }[];
   pointMultiplier: number;
 }) {
-  if (state.phase === "lobby" || state.phase === "draft" || state.phase === "podium") return null;
+  if (
+    state.phase === "lobby" ||
+    state.phase === "connect" ||
+    state.phase === "draft" ||
+    state.phase === "podium"
+  ) {
+    return null;
+  }
   if (state.teams.length < 2) return null;
   const ranked = [...state.teams].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, "ar"));
   const leader = ranked[0];
@@ -467,12 +475,15 @@ export function gameReducer(state: GameState, action: Action): GameState {
         muted: state.muted,
         settings: state.settings,
         cue: state.cue,
-        phase: "draft",
+        phase: "connect",
         mode: action.mode,
         teams,
         players: [],
       };
     }
+    case "BEGIN_DRAFT":
+      if (state.phase !== "connect" || state.teams.length < 2) return state;
+      return { ...state, phase: "draft", draftPicks: [], draftError: null };
     case "PICK_CATEGORY": {
       const plan = draftPlan(state);
       if (!plan) return state;

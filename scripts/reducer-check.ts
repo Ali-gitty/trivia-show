@@ -33,6 +33,7 @@ let state = gameReducer(createInitialState(), {
     { name: "الثاني", color: "#fb923c" },
   ],
 });
+state = gameReducer(state, { type: "BEGIN_DRAFT" });
 
 for (const category of categories) {
   state = gameReducer(state, { type: "PICK_CATEGORY", category, questions, playedIds: [] });
@@ -94,6 +95,7 @@ let multi = gameReducer(createInitialState(), {
     { name: "ج", color: "#34d399" },
   ],
 });
+multi = gameReducer(multi, { type: "BEGIN_DRAFT" });
 for (const category of categories.slice(0, 3)) {
   multi = gameReducer(multi, { type: "PICK_CATEGORY", category, questions, playedIds: [] });
 }
@@ -112,6 +114,7 @@ padded = gameReducer(padded, {
     { name: "ب", color: "#fb923c" },
   ],
 });
+padded = gameReducer(padded, { type: "BEGIN_DRAFT" });
 const padCats = Array.from({ length: 9 }, (_, index) => `فئة-${index + 1}`);
 const padQuestions = padCats.flatMap((category, categoryIndex) =>
   ([100, 200, 300, 400, 500] as const).map((points, tier) =>
@@ -149,6 +152,7 @@ classicNine = gameReducer(classicNine, {
     { name: "الثاني", color: "#fb923c" },
   ],
 });
+classicNine = gameReducer(classicNine, { type: "BEGIN_DRAFT" });
 for (const category of padCats) {
   classicNine = gameReducer(classicNine, {
     type: "PICK_CATEGORY",
@@ -173,6 +177,7 @@ blitzMatch = gameReducer(blitzMatch, {
     { name: "الثاني", color: "#fb923c" },
   ],
 });
+blitzMatch = gameReducer(blitzMatch, { type: "BEGIN_DRAFT" });
 const blitzCats = padCats.slice(0, 3);
 const blitzQuestions = blitzCats.flatMap((category, categoryIndex) =>
   ([100, 300, 500] as const).map((points, tier) => question(3000 + categoryIndex * 3 + tier, category, points)),
@@ -273,6 +278,7 @@ let activity = gameReducer(createInitialState(), {
     { name: "الثاني", color: "#fb923c" },
   ],
 });
+activity = gameReducer(activity, { type: "BEGIN_DRAFT" });
 for (const category of ["ارسم المشهد", ...categories.slice(0, 4)]) {
   activity = gameReducer(activity, {
     type: "PICK_CATEGORY",
@@ -328,6 +334,7 @@ let closest = gameReducer(createInitialState(), {
     { name: "الثاني", color: "#fb923c" },
   ],
 });
+closest = gameReducer(closest, { type: "BEGIN_DRAFT" });
 for (const category of closestCats) {
   closest = gameReducer(closest, {
     type: "PICK_CATEGORY",
@@ -373,6 +380,7 @@ let choices = gameReducer(createInitialState(), {
     { name: "الثاني", color: "#fb923c" },
   ],
 });
+choices = gameReducer(choices, { type: "BEGIN_DRAFT" });
 for (const category of categories) {
   choices = gameReducer(choices, { type: "PICK_CATEGORY", category, questions, playedIds: [] });
 }
