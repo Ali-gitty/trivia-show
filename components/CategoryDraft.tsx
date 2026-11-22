@@ -2,22 +2,35 @@
 
 import { useMemo, useState } from "react";
 import { Dices, Search, Settings2 } from "lucide-react";
+import { categoryKind } from "@/lib/board";
 import { CategoryLabel } from "@/lib/categoryIcons";
 import { draftPlan } from "@/lib/gameReducer";
 import { useGame } from "./GameProvider";
 import { Button, Panel } from "./ui";
 
+type KindFilter = "all" | "trivia" | "activity";
+
 export function CategoryDraft() {
-  const { categories, dispatch, finishDraft, pickCategory, state } = useGame();
+  const { bank, categories, dispatch, finishDraft, pickCategory, state } = useGame();
   const [query, setQuery] = useState("");
+  const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const plan = draftPlan(state);
   const taken = new Set(state.draftPicks.map((pick) => pick.category));
   const hostTurn = plan?.teamIndex == null;
-  const remaining = categories.filter((category) => !taken.has(category));
   const needle = query.trim();
+
+  const remaining = categories.filter((category) => {
+    if (taken.has(category)) return false;
+    if (kindFilter === "all") return true;
+    return categoryKind(bank, category) === kindFilter;
+  });
   const visible = useMemo(
-    () => categories.filter((category) => !needle || category.includes(needle)),
-    [categories, needle],
+    () =>
+      categories.filter((category) => {
+        if (kindFilter !== "all" && categoryKind(bank, category) !== kindFilter) return false;
+        return !needle || category.includes(needle);
+      }),
+    [bank, categories, kindFilter, needle],
   );
 
   const title = !plan
@@ -38,6 +51,12 @@ export function CategoryDraft() {
     const category = remaining[Math.floor(Math.random() * remaining.length)];
     pickCategory(category);
   };
+
+  const filters: { id: KindFilter; label: string }[] = [
+    { id: "all", label: "الكل" },
+    { id: "trivia", label: "أسئلة" },
+    { id: "activity", label: "فعاليات" },
+  ];
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-5 px-4 py-8">
@@ -71,6 +90,9 @@ export function CategoryDraft() {
               style={{ boxShadow: team ? `inset 4px 0 0 ${team.color}, 2px 3px 0 var(--shadow)` : undefined }}
             >
               <CategoryLabel category={pick.category} size={14} />
+              {categoryKind(bank, pick.category) === "activity" && (
+                <span className="mr-1 text-[11px] text-accent">فعالية</span>
+              )}
               <span className="mr-2 text-muted">{team ? team.name : "المقدم"}</span>
             </span>
           );
@@ -78,6 +100,23 @@ export function CategoryDraft() {
         <span className="chip chip-accent px-3 py-1 text-sm">
           {state.draftPicks.length} / {state.mode === "classic" ? 5 : 7}
         </span>
+      </div>
+
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="تصفية نوع الفئات">
+        {filters.map((filter) => (
+          <button
+            key={filter.id}
+            type="button"
+            role="tab"
+            aria-selected={kindFilter === filter.id}
+            onClick={() => setKindFilter(filter.id)}
+            className={`chip px-3 py-1.5 text-sm font-black ${
+              kindFilter === filter.id ? "chip-accent" : ""
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
       </div>
 
       <label className="field flex items-center gap-2 px-3">
@@ -98,6 +137,7 @@ export function CategoryDraft() {
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {visible.map((category) => {
           const pick = state.draftPicks.find((item) => item.category === category);
+          const activity = categoryKind(bank, category) === "activity";
           return (
             <button
               key={category}
@@ -108,6 +148,9 @@ export function CategoryDraft() {
               style={pick?.teamIndex != null ? { borderColor: state.teams[pick.teamIndex]?.color } : undefined}
             >
               <CategoryLabel category={category} size={18} className="justify-center font-black" />
+              {activity && (
+                <span className="mt-1 block text-[11px] font-medium text-accent">فعالية</span>
+              )}
               {pick && (
                 <span className="mt-1 block text-xs font-medium text-muted">
                   {pick.teamIndex == null ? "اختيار المقدم" : state.teams[pick.teamIndex]?.name}
@@ -119,7 +162,13 @@ export function CategoryDraft() {
       </div>
       {categories.length === 0 && <p className="note-danger px-4 py-3 text-sm">لا توجد فئات في البنك.</p>}
       {categories.length > 0 && visible.length === 0 && (
-        <p className="text-sm text-muted">لا توجد فئة بهذا الاسم.</p>
+        <p className="text-sm text-muted">
+          {kindFilter === "activity"
+            ? "لا توجد فئات فعاليات مطابقة."
+            : kindFilter === "trivia"
+              ? "لا توجد فئات أسئلة مطابقة."
+              : "لا توجد فئة بهذا الاسم."}
+        </p>
       )}
 
       <Panel className="flex flex-wrap items-center gap-3 p-4">

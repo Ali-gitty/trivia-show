@@ -23,6 +23,7 @@ export function QuestionBankModal() {
     useGame();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("الكل");
+  const [kind, setKind] = useState<"الكل" | "trivia" | "activity">("الكل");
   const [points, setPoints] = useState<Points | 0>(0);
   const [form, setForm] = useState<Question>(emptyForm);
   const [isNew, setIsNew] = useState(true);
@@ -34,6 +35,7 @@ export function QuestionBankModal() {
   const filtered = useMemo(() => {
     const needle = query.trim();
     return bank.filter((question) => {
+      if (kind !== "الكل" && question.kind !== kind) return false;
       if (category !== "الكل" && question.category !== category) return false;
       if (points && question.points !== points) return false;
       if (!needle) return true;
@@ -44,7 +46,7 @@ export function QuestionBankModal() {
         String(question.id) === needle
       );
     });
-  }, [bank, category, points, query]);
+  }, [bank, category, kind, points, query]);
 
   if (!state.bankOpen) return null;
 
@@ -138,6 +140,15 @@ export function QuestionBankModal() {
                 />
               </label>
               <select
+                value={kind}
+                onChange={(event) => setKind(event.target.value as "الكل" | "trivia" | "activity")}
+                className="field px-3 py-2"
+              >
+                <option value="الكل">أسئلة وفعاليات</option>
+                <option value="trivia">أسئلة فقط</option>
+                <option value="activity">فعاليات فقط</option>
+              </select>
+              <select
                 value={category}
                 onChange={(event) => setCategory(event.target.value)}
                 className="field px-3 py-2"
@@ -182,7 +193,8 @@ export function QuestionBankModal() {
                     }`}
                   >
                     <span className="text-xs font-bold text-accent">
-                      {question.id} · {question.category} · {question.points}
+                      {question.id} · {question.kind === "activity" ? "فعالية" : "سؤال"} · {question.category} ·{" "}
+                      {question.points}
                     </span>
                     <span className="mt-1 block text-sm">{question.question}</span>
                   </button>
@@ -214,6 +226,19 @@ export function QuestionBankModal() {
             </div>
             <Field label="الفئة" value={form.category} onChange={(category) => setForm({ ...form, category })} />
             <label className="grid gap-1 text-xs">
+              النوع
+              <select
+                value={form.kind}
+                onChange={(event) =>
+                  setForm({ ...form, kind: event.target.value === "activity" ? "activity" : "trivia" })
+                }
+                className="field px-3 py-2 text-sm"
+              >
+                <option value="trivia">سؤال</option>
+                <option value="activity">فعالية</option>
+              </select>
+            </label>
+            <label className="grid gap-1 text-xs">
               النقاط
               <select
                 value={form.points}
@@ -227,8 +252,17 @@ export function QuestionBankModal() {
                 ))}
               </select>
             </label>
-            <Field label="السؤال" value={form.question} onChange={(question) => setForm({ ...form, question })} area />
-            <Field label="الإجابة" value={form.answer} onChange={(answer) => setForm({ ...form, answer })} />
+            <Field
+              label={form.kind === "activity" ? "وصف الفعالية" : "السؤال"}
+              value={form.question}
+              onChange={(question) => setForm({ ...form, question })}
+              area
+            />
+            <Field
+              label={form.kind === "activity" ? "معيار التحكيم" : "الإجابة"}
+              value={form.answer}
+              onChange={(answer) => setForm({ ...form, answer })}
+            />
             <Field label="التلميح" value={form.hint} onChange={(hint) => setForm({ ...form, hint })} area />
             {form.options.map((option, index) => (
               <Field
