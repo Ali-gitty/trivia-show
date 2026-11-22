@@ -1,20 +1,29 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { draftPlan } from "@/lib/gameReducer";
 import { isClientWire, openPlayLink } from "@/lib/playChannel";
 import { buildPlaySnapshot } from "@/lib/playSnapshot";
+import type { TeamPowerKind } from "@/lib/types";
 import { useGame } from "./GameProvider";
 
 /** Host-side play relay: publishes play snapshots and applies phone intents. */
 export function PlayBridge({ room, live }: { room: string; live: boolean }) {
-  const { currentQuestion, dispatch, state } = useGame();
+  const { categories, currentQuestion, dispatch, pickCategory, state, usePower: applyPower } = useGame();
   const linkRef = useRef<ReturnType<typeof openPlayLink> | null>(null);
   const seq = useRef(0);
-  const latest = useRef({ state, question: currentQuestion });
+  const latest = useRef({ state, question: currentQuestion, categories });
+  const applyPowerRef = useRef(applyPower);
+  const pickCategoryRef = useRef(pickCategory);
 
   useEffect(() => {
-    latest.current = { state, question: currentQuestion };
-  }, [currentQuestion, state]);
+    latest.current = { state, question: currentQuestion, categories };
+  }, [categories, currentQuestion, state]);
+
+  useEffect(() => {
+    applyPowerRef.current = applyPower;
+    pickCategoryRef.current = pickCategory;
+  }, [applyPower, pickCategory]);
 
   useEffect(() => {
     if (!live || !room) return;
@@ -61,6 +70,31 @@ export function PlayBridge({ room, live }: { room: string; live: boolean }) {
           number: message.number,
           at: message.at,
         });
+        return;
+      }
+      if (message.type === "pickCategory") {
+        const current = latest.current.state;
+        const plan = draftPlan(current);
+        if (!plan || plan.teamIndex == null) return;
+        const player = current.players.find(
+          (item) => item.id === message.playerId && item.connected && item.isLeader,
+        );
+        if (!player) return;
+        if (current.teams[plan.teamIndex]?.id !== player.teamId) return;
+        if (!latest.current.categories.includes(message.category)) return;
+        if (current.draftPicks.some((pick) => pick.category === message.category)) return;
+        pickCategoryRef.current(message.category);
+        return;
+      }
+      if (message.type === "usePower") {
+        const current = latest.current.state;
+        const player = current.players.find(
+          (item) => item.id === message.playerId && item.connected && item.isLeader,
+        );
+        if (!player) return;
+        const teamIndex = current.teams.findIndex((team) => team.id === player.teamId);
+        if (teamIndex < 0) return;
+        applyPowerRef.current(teamIndex, message.kind as TeamPowerKind);
       }
     });
 
@@ -70,7 +104,7 @@ export function PlayBridge({ room, live }: { room: string; live: boolean }) {
       link.send({
         type: "playState",
         seq: seq.current,
-        snap: buildPlaySnapshot(current.state, current.question),
+        snap: buildPlaySnapshot(current.state, current.question, current.categories),
       });
     };
     publish();
@@ -95,9 +129,9 @@ export function PlayBridge({ room, live }: { room: string; live: boolean }) {
     link.send({
       type: "playState",
       seq: seq.current,
-      snap: buildPlaySnapshot(state, currentQuestion),
+      snap: buildPlaySnapshot(state, currentQuestion, categories),
     });
-  }, [currentQuestion, live, state]);
+  }, [categories, currentQuestion, live, state]);
 
   return null;
 }

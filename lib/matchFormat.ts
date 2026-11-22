@@ -76,13 +76,16 @@ export function clampCategoryCount(value: number, format: MatchFormatId) {
   return Math.min(MAX_BUZZER_CATEGORIES, Math.max(3, Math.round(value)));
 }
 
-/** Classic draft order: split team picks evenly, host takes the last slot. */
+/** Classic draft order: teams alternate picks, host takes the last slot. */
 export function classicDraftSteps(categoryCount: number): Array<number | null> {
   const n = Math.min(MAX_BUZZER_CATEGORIES, Math.max(3, categoryCount));
   const teamSlots = n - 1;
-  const team0 = Math.ceil(teamSlots / 2);
-  const team1 = teamSlots - team0;
-  return [...Array(team0).fill(0), ...Array(team1).fill(1), null];
+  const steps: Array<number | null> = [];
+  for (let index = 0; index < teamSlots; index += 1) {
+    steps.push(index % 2);
+  }
+  steps.push(null);
+  return steps;
 }
 
 export function applyFormat(
