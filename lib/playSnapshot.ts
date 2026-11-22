@@ -1,13 +1,16 @@
 import { formatAnswerRange } from "./numberRange";
-import { isQuestionPhase } from "./gameReducer";
-import type {
-  AnswerSubmission,
-  GameState,
-  Outcome,
-  Phase,
-  PlayerSeat,
-  Question,
-  RemoteBuzz,
+import { draftCategoryTarget, draftPlan, isQuestionPhase, powerEligible } from "./gameReducer";
+import {
+  teamPowerKindsForMode,
+  type AnswerSubmission,
+  type Cooldowns,
+  type GameState,
+  type Outcome,
+  type Phase,
+  type PlayerSeat,
+  type Question,
+  type RemoteBuzz,
+  type TeamPowerKind,
 } from "./types";
 
 export type PlayTeam = {
@@ -31,9 +34,22 @@ export type PlaySubmissionView = {
   teamId: string;
   locked: boolean;
   kind: AnswerSubmission["kind"] | null;
-  /** Own team text is always visible to that team's phones; rivals only after reveal. */
   text: string | null;
   number: number | null;
+};
+
+export type PlayDraft = {
+  turnTeamIndex: number | null;
+  optional: boolean;
+  picks: { category: string; teamIndex: number | null }[];
+  remaining: string[];
+  target: number;
+};
+
+export type PlayPowerView = {
+  teamId: string;
+  eligible: boolean;
+  cooldowns: Cooldowns;
 };
 
 export type PlaySnapshot = {
@@ -54,9 +70,18 @@ export type PlaySnapshot = {
   question: PlayQuestion | null;
   submissions: PlaySubmissionView[];
   pointMultiplier: number;
+  draft: PlayDraft | null;
+  powerKinds: TeamPowerKind[];
+  powers: PlayPowerView[];
+  optionsVisible: boolean;
+  rangeVisible: boolean;
 };
 
-export function buildPlaySnapshot(state: GameState, question: Question | null): PlaySnapshot {
+export function buildPlaySnapshot(
+  state: GameState,
+  question: Question | null,
+  categories: string[] = [],
+): PlaySnapshot {
   const tile = state.board.find((item) => item.id === state.currentTileId);
   const showQuestion = isQuestionPhase(state.phase) && question && tile;
   const submissions: PlaySubmissionView[] = state.teams.map((team) => {
@@ -73,6 +98,19 @@ export function buildPlaySnapshot(state: GameState, question: Question | null): 
       number: showText ? entry.number : null,
     };
   });
+  const plan = draftPlan(state);
+  const picked = new Set(state.draftPicks.map((pick) => pick.category));
+  const draft: PlayDraft | null =
+    state.phase === "draft"
+      ? {
+          turnTeamIndex: plan?.teamIndex ?? null,
+          optional: Boolean(plan?.optional),
+          picks: state.draftPicks.map((pick) => ({ ...pick })),
+          remaining: categories.filter((category) => !picked.has(category)),
+          target: draftCategoryTarget(state),
+        }
+      : null;
+  const eligible = new Set(powerEligible(state));
   return {
     phase: state.phase,
     mode: state.mode,
@@ -109,6 +147,15 @@ export function buildPlaySnapshot(state: GameState, question: Question | null): 
         }
       : null,
     submissions,
+    draft,
+    powerKinds: teamPowerKindsForMode(state.mode),
+    powers: state.teams.map((team, index) => ({
+      teamId: team.id,
+      eligible: eligible.has(index),
+      cooldowns: { ...team.cooldowns },
+    })),
+    optionsVisible: state.optionsVisible,
+    rangeVisible: state.rangeVisible,
   };
 }
 

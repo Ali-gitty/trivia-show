@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen, RotateCcw, Settings2, Smartphone, Tv, Users, Volume2, VolumeX } from "lucide-react";
+import { BookOpen, RotateCcw, Settings2, Smartphone, Users, Volume2, VolumeX } from "lucide-react";
 import { useTv } from "./TvBridge";
 import { useGame } from "./GameProvider";
 import { Button, Panel } from "./ui";
@@ -55,6 +55,7 @@ export function SetupLobby() {
   const start = () => {
     if (duplicate || categories.length < categoryNeed) return;
     if (mode === "buzzer" && teamCount > categoryNeed) return;
+    openLink();
     startDraft(
       mode,
       Array.from({ length: teamCount }, (_, index) => ({
@@ -84,10 +85,6 @@ export function SetupLobby() {
             <BookOpen size={16} />
             بنك الأسئلة
           </Button>
-          <Button variant="ghost" onClick={openLink}>
-            <Tv size={16} />
-            تلفاز / جوالات
-          </Button>
         </div>
       </header>
 
@@ -96,8 +93,8 @@ export function SetupLobby() {
           <Smartphone size={18} /> اتصال اللاعبين
         </h2>
         <p className="text-sm leading-7 text-muted">
-          اختياري في كل الأوضاع — يمكنهم القراءة والإرسال أو إخبارك شفهياً. في وضع الجرس يظهر زر جرس على
-          الجوال ويُعلَن من ضغط أولاً.
+          بعد اختيار الوضع والضغط على «ابدأ سحب الفئات» يظهر رمز QR للاتصال. الجوالات تختار الفئات
+          بالتناوب، وتستخدم القدرات، وترى الخيارات المتعددة عند تفعيلها.
         </p>
         <div className="flex flex-wrap gap-2">
           <button
@@ -114,9 +111,6 @@ export function SetupLobby() {
           >
             المقدم فقط (قراءة + جرس)
           </button>
-          <Button variant="ghost" onClick={openLink}>
-            فتح رمز الغرفة / QR
-          </Button>
         </div>
       </Panel>
 

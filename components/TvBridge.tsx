@@ -133,6 +133,18 @@ export function TvBridge({ children }: { children: ReactNode }) {
     setBlocked(false);
   }, [room]);
 
+  const draftQrShown = useRef(false);
+  // Show connect QR once when the match enters category draft (after mode start).
+  useEffect(() => {
+    if (state.phase !== "draft") {
+      draftQrShown.current = false;
+      return;
+    }
+    if (draftQrShown.current) return;
+    draftQrShown.current = true;
+    openLink();
+  }, [openLink, state.phase]);
+
   const stop = () => {
     sessionStorage.removeItem(STORAGE.screenLive);
     notifyScreen();

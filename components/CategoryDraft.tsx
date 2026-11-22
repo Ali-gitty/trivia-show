@@ -1,18 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Dices, Search, Settings2 } from "lucide-react";
+import { Dices, Search, Settings2, Smartphone } from "lucide-react";
 import { categoryKind } from "@/lib/board";
 import { CategoryLabel } from "@/lib/categoryIcons";
 import { draftCategoryTarget, draftPlan } from "@/lib/gameReducer";
 import { matchFormatOf } from "@/lib/matchFormat";
 import { useGame } from "./GameProvider";
+import { useTv } from "./TvBridge";
 import { Button, Panel } from "./ui";
 
 type KindFilter = "all" | "trivia" | "activity";
 
 export function CategoryDraft() {
   const { bank, categories, dispatch, finishDraft, pickCategory, state } = useGame();
+  const { openLink } = useTv();
   const [query, setQuery] = useState("");
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const plan = draftPlan(state);
@@ -40,7 +42,7 @@ export function CategoryDraft() {
     ? "اكتمل السحب"
     : plan.teamIndex == null
       ? "دور المقدم"
-      : `دور ${state.teams[plan.teamIndex]?.name ?? "الفريق"}`;
+      : `دور ${state.teams[plan.teamIndex]?.name ?? "الفريق"} (تناوب · الجوال أيضاً)`;
 
   const modeLabel =
     state.mode === "buzzer"
@@ -82,6 +84,10 @@ export function CategoryDraft() {
               فئة عشوائية
             </Button>
           )}
+          <Button variant="ghost" onClick={openLink}>
+            <Smartphone size={16} />
+            QR الجوالات
+          </Button>
           <Button variant="ghost" onClick={() => dispatch({ type: "TOGGLE_SETTINGS" })}>
             <Settings2 size={16} />
             الإعدادات

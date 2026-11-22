@@ -28,6 +28,8 @@ export type PlayClientWire =
       number: number | null;
       at: number;
     }
+  | { type: "pickCategory"; playerId: string; category: string; at: number }
+  | { type: "usePower"; playerId: string; kind: "time" | "choice" | "range" | "cut" | "skip"; at: number }
   | { type: "leave"; playerId: string; at: number };
 
 export type PlayWire = PlayHostWire | PlayClientWire;
@@ -74,6 +76,18 @@ function isClientWire(value: unknown): value is PlayClientWire {
       (wire.kind === "text" || wire.kind === "option" || wire.kind === "number") &&
       typeof wire.text === "string" &&
       (wire.number == null || typeof wire.number === "number")
+    );
+  }
+  if (wire.type === "pickCategory") {
+    return typeof wire.category === "string" && wire.category.length > 0;
+  }
+  if (wire.type === "usePower") {
+    return (
+      wire.kind === "time" ||
+      wire.kind === "choice" ||
+      wire.kind === "range" ||
+      wire.kind === "cut" ||
+      wire.kind === "skip"
     );
   }
   return false;

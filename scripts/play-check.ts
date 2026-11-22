@@ -1,4 +1,5 @@
 import { createInitialState, gameReducer, closestWinnerIndex } from "../lib/gameReducer";
+import { classicDraftSteps } from "../lib/matchFormat";
 import { buildPlaySnapshot } from "../lib/playSnapshot";
 import { isClientWire, isHostWire } from "../lib/playChannel";
 import type { Question } from "../lib/types";
@@ -181,10 +182,17 @@ if (buzz.remoteBuzz?.playerId !== "b1" || buzz.buzzingTeamIndex !== 1) {
 
 if (
   !isClientWire({ type: "buzz", playerId: "x", at: 1 }) ||
+  !isClientWire({ type: "pickCategory", playerId: "x", category: "علوم", at: 1 }) ||
+  !isClientWire({ type: "usePower", playerId: "x", kind: "choice", at: 1 }) ||
   isClientWire({ type: "playState", seq: 1, snap }) ||
   !isHostWire({ type: "playState", seq: 1, snap })
 ) {
   throw new Error("wire guards failed");
+}
+
+const steps5 = classicDraftSteps(5);
+if (steps5.length !== 5 || steps5[0] !== 0 || steps5[1] !== 1 || steps5[2] !== 0 || steps5[3] !== 1 || steps5[4] !== null) {
+  throw new Error(`classic draft should alternate: ${JSON.stringify(steps5)}`);
 }
 
 console.log("play checks passed");

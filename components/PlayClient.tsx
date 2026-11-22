@@ -24,7 +24,9 @@ export function PlayClient() {
   const seqRef = useRef(0);
 
   useEffect(() => {
+    // Client-only bootstrap (sessionStorage / URL); skip on SSR.
     const code = readRoomParam();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot client hydration
     setId(playerId());
     setRoomInput(code);
     setRoom(code);
@@ -248,6 +250,10 @@ export function PlayClient() {
           sent={sent}
           onBuzz={() => send({ type: "buzz", playerId: id, at: Date.now() })}
           onSubmit={(kind, text, number, at) => submit(kind, text, number, at)}
+          onPickCategory={(category, at) =>
+            send({ type: "pickCategory", playerId: id, category, at })
+          }
+          onUsePower={(kind, at) => send({ type: "usePower", playerId: id, kind, at })}
         />
       </div>
     </div>
@@ -262,6 +268,14 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
+const POWER_LABELS: Record<"time" | "choice" | "range" | "cut" | "skip", string> = {
+  time: "وقت إضافي",
+  choice: "خيارات متعددة",
+  range: "نطاق تقريبي",
+  cut: "احذف خيارين",
+  skip: "تخطي السؤال",
+};
+
 function PlayStage({
   snap,
   meId,
@@ -271,6 +285,8 @@ function PlayStage({
   sent,
   onBuzz,
   onSubmit,
+  onPickCategory,
+  onUsePower,
 }: {
   snap: PlaySnapshot | null;
   meId: string;
@@ -280,6 +296,8 @@ function PlayStage({
   sent: string | null;
   onBuzz: () => void;
   onSubmit: (kind: "text" | "option" | "number", text: string, number: number | null, at: number) => void;
+  onPickCategory: (category: string, at: number) => void;
+  onUsePower: (kind: "time" | "choice" | "range" | "cut" | "skip", at: number) => void;
 }) {
   if (!snap) {
     return <p className="text-center text-sm text-muted">بانتظار بث المقدم…</p>;
@@ -288,6 +306,14 @@ function PlayStage({
   const question = snap.question;
   const lockedOut = me ? snap.lockedOutTeamIds.includes(me.teamId) : false;
   const mySub = me ? snap.submissions.find((item) => item.teamId === me.teamId) : null;
+  const myPower = me ? snap.powers.find((item) => item.teamId === me.teamId) : null;
+  const turnTeam =
+    snap.draft && snap.draft.turnTeamIndex != null ? snap.teams[snap.draft.turnTeamIndex] : null;
+  const myDraftTurn =
+    Boolean(me?.isLeader) &&
+    snap.phase === "draft" &&
+    snap.draft != null &&
+    turnTeam?.id === me?.teamId;
   const canAnswer =
     Boolean(me) &&
     snap.phoneAnswers === "open" &&
@@ -298,14 +324,70 @@ function PlayStage({
       (snap.mode !== "buzzer" &&
         me?.isLeader &&
         (snap.phase === "primary" || snap.phase === "steal" || snap.phase === "adjudicate")));
+  const canUsePowers =
+    Boolean(me?.isLeader && myPower?.eligible) &&
+    (snap.phase === "primary" ||
+      snap.phase === "steal" ||
+      snap.phase === "buzzOpen" ||
+      snap.phase === "buzzLocked");
+  const optionSelect = canAnswer && (snap.mode === "choices" || snap.mode === "classic");
 
   return (
     <div className="grid flex-1 gap-4">
-      {(snap.phase === "lobby" || snap.phase === "draft" || snap.phase === "board") && (
+      {snap.phase === "lobby" && (
         <Panel className="p-5 text-center">
+          <p className="text-lg font-black">بانتظار بدء السحب</p>
+          <p className="mt-2 text-sm text-muted">اختر فريقك إن لم تفعل، ثم انتظر المقدم.</p>
+        </Panel>
+      )}
+
+      {snap.phase === "draft" && snap.draft && (
+        <Panel className="grid gap-3 p-5">
           <p className="text-lg font-black">
-            {snap.phase === "board" ? "بانتظار اختيار خانة" : "بانتظار بدء السؤال"}
+            {turnTeam
+              ? `دور ${turnTeam.name}`
+              : snap.draft.optional
+                ? "دور المقدم (اختياري)"
+                : "دور المقدم"}
           </p>
+          <p className="text-xs text-muted">
+            مختار {snap.draft.picks.length} · متناوب بين الفريقين · آخر اختيار للمقدم
+          </p>
+          {snap.draft.picks.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {snap.draft.picks.map((pick) => (
+                <span key={pick.category} className="chip px-2 py-1 text-xs">
+                  {pick.category}
+                </span>
+              ))}
+            </div>
+          )}
+          {myDraftTurn ? (
+            <div className="grid max-h-72 gap-2 overflow-y-auto">
+              {snap.draft.remaining.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => onPickCategory(category, Date.now())}
+                  className="board-btn px-4 py-3 text-right text-sm font-bold"
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">
+              {me?.isLeader
+                ? "انتظر دور فريقك لاختيار فئة."
+                : "القائد يختار الفئة عندما يحين دور فريقكم."}
+            </p>
+          )}
+        </Panel>
+      )}
+
+      {snap.phase === "board" && (
+        <Panel className="p-5 text-center">
+          <p className="text-lg font-black">بانتظار اختيار خانة</p>
           <p className="mt-2 text-sm text-muted">ستظهر الأسئلة هنا تلقائياً.</p>
         </Panel>
       )}
@@ -331,6 +413,59 @@ function PlayStage({
         </Panel>
       )}
 
+      {question?.options && question.options.length > 0 && (
+        <div className="grid gap-2">
+          <p className="text-xs font-black text-muted">
+            {snap.mode === "choices" ? "الخيارات" : "خيارات متعددة"}
+          </p>
+          {question.options.map((option) =>
+            optionSelect ? (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onSubmit("option", option, null, Date.now())}
+                className="board-btn px-4 py-4 text-right text-base font-bold"
+              >
+                {option}
+              </button>
+            ) : (
+              <p key={option} className="board-card px-4 py-3 text-sm font-bold">
+                {option}
+              </p>
+            ),
+          )}
+        </div>
+      )}
+
+      {canUsePowers && myPower && (
+        <div className="grid gap-2">
+          <p className="text-xs font-black text-muted">قدرات الفريق</p>
+          {(snap.powerKinds ?? []).map((kind) => {
+            const turns = myPower.cooldowns[kind] ?? 0;
+            const used =
+              (kind === "choice" && snap.optionsVisible) ||
+              (kind === "range" && snap.rangeVisible) ||
+              (kind === "cut" && (question?.options?.length ?? 0) > 0 && (question?.options?.length ?? 0) <= 2);
+            const phaseBlocked = kind === "time" && snap.phase !== "primary" && snap.phase !== "steal";
+            const disabled = turns > 0 || used || phaseBlocked;
+            return (
+              <button
+                key={kind}
+                type="button"
+                disabled={disabled}
+                onClick={() => onUsePower(kind, Date.now())}
+                className="board-btn board-btn-ghost flex items-center justify-between px-4 py-3 text-sm disabled:opacity-40"
+              >
+                <span>{POWER_LABELS[kind]}</span>
+                <span className="chip px-2 py-0.5 text-[10px]">
+                  {used && turns <= 0 ? "ظاهر" : turns > 0 ? `${turns}` : "جاهز"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {snap.mode === "buzzer" && snap.phase === "buzzOpen" && me && (
         <button
           type="button"
@@ -340,21 +475,6 @@ function PlayStage({
         >
           {lockedOut ? "مستبعد" : "جرس"}
         </button>
-      )}
-
-      {canAnswer && snap.mode === "choices" && question?.options && (
-        <div className="grid gap-2">
-          {question.options.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onSubmit("option", option, null, Date.now())}
-              className="board-btn px-4 py-4 text-right text-base font-bold"
-            >
-              {option}
-            </button>
-          ))}
-        </div>
       )}
 
       {canAnswer && snap.mode === "closest" && (
@@ -381,7 +501,7 @@ function PlayStage({
         </form>
       )}
 
-      {canAnswer && (snap.mode === "classic" || snap.mode === "buzzer") && (
+      {canAnswer && (snap.mode === "classic" || snap.mode === "buzzer") && !question?.options && (
         <form
           className="grid gap-2"
           onSubmit={(event) => {
