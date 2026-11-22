@@ -33,7 +33,6 @@ import {
   Tv,
   UtensilsCrossed,
   Wifi,
-  Zap,
 } from "lucide-react";
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -66,9 +65,9 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   "حساب بسيط للأطفال": Calculator,
   "من حولنا للأطفال": Earth,
   "ارسم المشهد": Paintbrush,
-  "اشرح بشكل مضحك": Mic2,
+  "تعليق كوميدي": Mic2,
   "تمثيل صامت": Drama,
-  "كلمات ممنوعة": Zap,
+  "قصة مقيدة": BookOpen,
   "سرعة وبديهة": Timer,
   "ارتجال وإقناع": Sparkles,
   "توازن ومهارات": PersonStanding,

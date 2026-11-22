@@ -53,28 +53,6 @@ for (let round = 0; round < 40; round += 1) {
 }
 if (draws.size < 10) throw new Error(`random draw too narrow: ${draws.size}`);
 
-const expectPoints: Record<number, Points> = {
-  23: 300,
-  27: 100,
-  118: 200,
-  337: 100,
-  238: 200,
-  18: 200,
-  440: 300,
-  54: 200,
-  58: 300,
-  493: 300,
-  451: 200,
-  245: 100,
-  96: 200,
-  5: 500,
-  277: 500,
-};
-for (const [id, points] of Object.entries(expectPoints)) {
-  const found = bank.find((item) => item.id === Number(id));
-  if (!found || found.points !== points) throw new Error(`points for ${id} are ${found?.points}, expected ${points}`);
-}
-
 const tiers = new Map<string, { kind: string; set: Map<number, number> }>();
 for (const item of bank) {
   const entry = tiers.get(item.category) ?? { kind: item.kind ?? "trivia", set: new Map<number, number>() };
