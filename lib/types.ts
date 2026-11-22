@@ -134,6 +134,8 @@ export type Outcome = {
   delta: number;
 };
 
+export type PhoneAnswers = "open" | "hostOnly";
+
 export type HostSettings = {
   primarySeconds: number;
   stealSeconds: number;
@@ -142,6 +144,7 @@ export type HostSettings = {
   format: MatchFormatId;
   categoryCount: number;
   pointTiers: Points[];
+  phoneAnswers: PhoneAnswers;
 };
 
 export const DEFAULT_HOST_SETTINGS: HostSettings = {
@@ -152,6 +155,32 @@ export const DEFAULT_HOST_SETTINGS: HostSettings = {
   format: "normal",
   categoryCount: 5,
   pointTiers: [100, 200, 300, 400, 500],
+  phoneAnswers: "open",
+};
+
+export type PlayerSeat = {
+  id: string;
+  name: string;
+  teamId: string;
+  isLeader: boolean;
+  connected: boolean;
+  lastSeen: number;
+};
+
+export type AnswerSubmission = {
+  playerId: string;
+  teamId: string;
+  kind: "text" | "option" | "number";
+  text: string;
+  number: number | null;
+  at: number;
+};
+
+export type RemoteBuzz = {
+  playerId: string;
+  playerName: string;
+  teamId: string;
+  at: number;
 };
 
 export function clampSpeechRate(value: number) {
@@ -173,6 +202,7 @@ export function normalizeHostSettings(input: Partial<HostSettings> | null | unde
     primarySeconds: Number(input?.primarySeconds ?? DEFAULT_HOST_SETTINGS.primarySeconds),
     stealSeconds: Number(input?.stealSeconds ?? DEFAULT_HOST_SETTINGS.stealSeconds),
   });
+  const phoneAnswers = input?.phoneAnswers === "hostOnly" ? "hostOnly" : "open";
   return {
     primarySeconds: clampTimerSeconds(applied.primarySeconds, 10, 300),
     stealSeconds: clampTimerSeconds(applied.stealSeconds, 5, 120),
@@ -181,6 +211,7 @@ export function normalizeHostSettings(input: Partial<HostSettings> | null | unde
     format: applied.format,
     categoryCount: applied.categoryCount,
     pointTiers: applied.pointTiers,
+    phoneAnswers,
   };
 }
 
@@ -216,6 +247,9 @@ export type GameState = {
   outcome: Outcome | null;
   notice: string | null;
   pointMultiplier: number;
+  players: PlayerSeat[];
+  submissions: Record<string, AnswerSubmission>;
+  remoteBuzz: RemoteBuzz | null;
 };
 
 export function isPoints(value: number): value is Points {

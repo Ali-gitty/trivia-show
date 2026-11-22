@@ -112,6 +112,30 @@ export function HostPanel() {
                   {team.score}
                 </button>
               </div>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {state.players
+                  .filter((player) => player.teamId === team.id)
+                  .map((player) => (
+                    <button
+                      key={player.id}
+                      type="button"
+                      title="تعيين قائداً"
+                      onClick={() =>
+                        dispatch({
+                          type: "PLAYER_SET_LEADER",
+                          teamId: team.id,
+                          targetId: player.id,
+                        })
+                      }
+                      className={`chip px-2 py-1 text-[11px] ${player.connected ? "" : "opacity-40"} ${
+                        player.isLeader ? "chip-accent" : ""
+                      }`}
+                    >
+                      {player.name}
+                      {player.isLeader ? " ★" : ""}
+                    </button>
+                  ))}
+              </div>
               <div className="mt-2 grid grid-cols-2 gap-1">
                 {teamPowers.map((power, index) => (
                   <button

@@ -12,6 +12,7 @@ export const STORAGE = {
   screenRoom: "trivia.screenRoom",
   screenLive: "trivia.screenLive",
   screenViewer: "trivia.screenViewer",
+  playPlayer: "trivia.playPlayer",
 } as const;
 
 export const bundledQuestions: Question[] = (bundled as unknown[])
