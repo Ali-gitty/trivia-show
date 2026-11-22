@@ -55,14 +55,13 @@ export function SetupLobby() {
   const start = () => {
     if (duplicate || categories.length < categoryNeed) return;
     if (mode === "buzzer" && teamCount > categoryNeed) return;
+    // Arm the room/QR first so phones can receive teams as soon as draft starts.
     openLink();
-    startDraft(
-      mode,
-      Array.from({ length: teamCount }, (_, index) => ({
-        name: names[index] ?? TEAM_NAMES[index],
-        color: colors[index] ?? TEAM_COLORS[index],
-      })),
-    );
+    const teams = Array.from({ length: teamCount }, (_, index) => ({
+      name: names[index] ?? TEAM_NAMES[index],
+      color: colors[index] ?? TEAM_COLORS[index],
+    }));
+    window.requestAnimationFrame(() => startDraft(mode, teams));
   };
 
   return (

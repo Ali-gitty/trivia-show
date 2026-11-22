@@ -111,6 +111,9 @@ export function PlayClient() {
     setDraft("");
   };
 
+  const teamsReady = (snap?.teams.length ?? 0) > 0;
+  const needsTeam = Boolean(room) && !joinedTeamId && step !== "room";
+
   if (step === "room") {
     return (
       <Shell>
@@ -133,53 +136,55 @@ export function PlayClient() {
     );
   }
 
-  if (step === "name") {
+  // Name + team as soon as category draft starts (teams appear in the snapshot).
+  if (needsTeam) {
     return (
       <Shell>
         <Panel className="grid w-full max-w-md gap-4 p-5">
-          <p className="text-xs text-muted">الغرفة {room}</p>
-          <h1 className="text-2xl font-black">اسمك</h1>
+          <p className="text-xs text-muted">
+            الغرفة {room}
+            {snap?.phase === "draft" ? " · سحب الفئات بدأ" : ""}
+            {relay === "live" ? "" : " · جارٍ الاتصال…"}
+          </p>
+          <h1 className="text-2xl font-black">اسمك وفريقك</h1>
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
             className="field px-3 py-3 text-lg"
             maxLength={24}
             placeholder="مثال: سارة"
+            autoFocus
           />
-          <Button className="h-12" disabled={!name.trim()} onClick={() => setStep("team")}>
-            اختيار الفريق
-          </Button>
-        </Panel>
-      </Shell>
-    );
-  }
-
-  if (step === "team") {
-    return (
-      <Shell>
-        <Panel className="grid w-full max-w-md gap-4 p-5">
-          <h1 className="text-2xl font-black">اختر فريقك</h1>
-          {!snap?.teams.length && (
+          {!teamsReady ? (
             <p className="text-sm text-muted">
-              {relay === "live" ? "بانتظار المقدم لبدء المباراة…" : "جارٍ الاتصال…"}
+              بانتظار بدء سحب الفئات من المقدم — ستظهر الفرق هنا فوراً.
             </p>
+          ) : (
+            <>
+              <p className="text-sm font-bold">اختر فريقك</p>
+              <div className="grid gap-2">
+                {snap!.teams.map((team) => (
+                  <button
+                    key={team.id}
+                    type="button"
+                    disabled={!name.trim()}
+                    onClick={() => joinTeam(team.id, Date.now())}
+                    className="board-btn flex items-center justify-between gap-3 px-4 py-4 text-right disabled:opacity-40"
+                    style={{ borderColor: team.color }}
+                  >
+                    <span className="font-black" style={{ color: team.color }}>
+                      {team.name}
+                    </span>
+                    <span className="text-sm text-muted">
+                      {snap?.players.filter((player) => player.teamId === team.id && player.connected)
+                        .length ?? 0}{" "}
+                      لاعب
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
-          <div className="grid gap-2">
-            {(snap?.teams ?? []).map((team) => (
-              <button
-                key={team.id}
-                type="button"
-                onClick={() => joinTeam(team.id, Date.now())}
-                className="board-btn flex items-center justify-between gap-3 px-4 py-4 text-right"
-                style={{ borderColor: team.color }}
-              >
-                <span className="font-black" style={{ color: team.color }}>
-                  {team.name}
-                </span>
-                <span className="text-sm text-muted">{team.score}</span>
-              </button>
-            ))}
-          </div>
         </Panel>
       </Shell>
     );
@@ -202,10 +207,9 @@ export function PlayClient() {
           </p>
         </header>
 
-        {snap && !me && (
+        {joinedTeamId && !me && (
           <Panel className="grid gap-3 p-4">
-            <p className="text-sm">لم تُسجَّل في فريق بعد.</p>
-            <Button onClick={() => setStep("team")}>اختيار الفريق</Button>
+            <p className="text-sm text-muted">جارٍ تسجيل انضمامك للفريق…</p>
           </Panel>
         )}
 
