@@ -87,10 +87,8 @@ export function QuestionStage() {
                       speakArabic(
                         visibleReading({
                           question: currentQuestion.question,
-                          hint: currentQuestion.hint,
                           options: state.optionsOrder,
                           answer: currentQuestion.answer,
-                          hintVisible: state.hintVisible,
                           optionsVisible: state.optionsVisible,
                           answerRevealed: state.answerRevealed,
                         }),
@@ -110,12 +108,6 @@ export function QuestionStage() {
             </div>
 
             <h2 className="text-3xl font-black leading-relaxed sm:text-4xl">{currentQuestion.question}</h2>
-
-            {state.hintVisible && (
-              <p className="note-ok mt-4 px-4 py-3">
-                تلميح للجميع: {currentQuestion.hint}
-              </p>
-            )}
 
             {state.optionsVisible && <ChoiceGrid options={state.optionsOrder} />}
 
@@ -143,7 +135,7 @@ export function QuestionStage() {
               <PowerUpBar
                 teams={state.teams}
                 eligible={powerEligible(state)}
-                hintVisible={state.hintVisible}
+                phase={state.phase}
                 optionsVisible={state.optionsVisible}
                 onUse={usePower}
               />

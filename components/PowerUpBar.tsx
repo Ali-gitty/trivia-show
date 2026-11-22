@@ -1,12 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Lightbulb, ListChecks, SkipForward } from "lucide-react";
-import type { Team } from "@/lib/types";
+import { ListChecks, SkipForward, Timer } from "lucide-react";
+import type { Phase, Team, TeamPowerKind } from "@/lib/types";
+import { EXTRA_TIME_SECONDS } from "@/lib/types";
 import { cooldownLabel } from "./ui";
 
 const kinds = [
-  { kind: "hint" as const, label: "تلميح للجميع", icon: Lightbulb },
+  { kind: "time" as const, label: `وقت إضافي +${EXTRA_TIME_SECONDS}`, icon: Timer },
   { kind: "choice" as const, label: "خيارات متعددة", icon: ListChecks },
   { kind: "skip" as const, label: "تخطي السؤال", icon: SkipForward },
 ];
@@ -14,17 +15,18 @@ const kinds = [
 export function PowerUpBar({
   teams,
   eligible,
-  hintVisible,
+  phase,
   optionsVisible,
   onUse,
 }: {
   teams: Team[];
   eligible: number[];
-  hintVisible: boolean;
+  phase: Phase;
   optionsVisible: boolean;
-  onUse: (teamIndex: number, kind: "hint" | "choice" | "skip") => void;
+  onUse: (teamIndex: number, kind: TeamPowerKind) => void;
 }) {
   if (!eligible.length) return null;
+  const timedPhase = phase === "primary" || phase === "steal";
   return (
     <div className="grid gap-2">
       {eligible.map((index) => {
@@ -38,9 +40,9 @@ export function PowerUpBar({
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {kinds.map((item) => {
                 const turns = team.cooldowns[item.kind];
-                const used =
-                  (item.kind === "hint" && hintVisible) || (item.kind === "choice" && optionsVisible);
-                const disabled = turns > 0 || used;
+                const used = item.kind === "choice" && optionsVisible;
+                const phaseBlocked = item.kind === "time" && !timedPhase;
+                const disabled = turns > 0 || used || phaseBlocked;
                 const Icon = item.icon;
                 return (
                   <button

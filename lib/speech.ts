@@ -2,10 +2,8 @@ export const SPEECH_SAMPLE = "مرحباً، هذه قراءة فعاليات ا
 
 export type SpeechPiece = {
   question: string;
-  hint: string;
   options: string[];
   answer: string;
-  hintVisible: boolean;
   optionsVisible: boolean;
   answerRevealed: boolean;
 };
@@ -18,15 +16,11 @@ export function publicAnnouncement(input: SpeechPiece) {
     const list = input.options.map((option, index) => `${index + 1}. ${option}`).join("، ");
     return { key: "options", text: `الخيارات. ${list}` };
   }
-  if (input.hintVisible && input.hint.trim()) {
-    return { key: "hint", text: `تلميح. ${input.hint.trim()}` };
-  }
   return { key: "question", text: input.question.trim() };
 }
 
 export function visibleReading(input: SpeechPiece) {
   const parts = [input.question.trim()];
-  if (input.hintVisible && input.hint.trim()) parts.push(`تلميح. ${input.hint.trim()}`);
   if (input.optionsVisible && input.options.length) {
     parts.push(`الخيارات. ${input.options.map((option, index) => `${index + 1}. ${option}`).join("، ")}`);
   }
@@ -66,7 +60,7 @@ export function arabicVoiceLabel() {
 }
 
 export function speechSupported() {
-  return typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
+  return typeof window === "undefined" ? false : "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
 }
 
 let speechTicket = 0;
