@@ -195,10 +195,16 @@ export function PlayClient() {
     );
   }
 
+  const drafting = snap?.phase === "draft";
+
   return (
     <div className="min-h-dvh bg-[var(--bg)] text-[var(--ink)]" dir="rtl">
-      <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-4 px-4 py-5">
-        <header className="flex items-center justify-between gap-3">
+      <div
+        className={`mx-auto flex min-h-dvh w-full max-w-lg flex-col px-4 ${
+          drafting ? "gap-3 py-3" : "gap-4 py-5"
+        }`}
+      >
+        <header className="flex shrink-0 items-center justify-between gap-3">
           <div>
             <p className="text-xs text-muted">الغرفة {room}</p>
             <p className="font-black">
@@ -213,13 +219,13 @@ export function PlayClient() {
         </header>
 
         {joinedTeamId && !me && (
-          <Panel className="grid gap-3 p-4">
+          <Panel className="grid shrink-0 gap-3 p-4">
             <p className="text-sm text-muted">جارٍ تسجيل انضمامك للفريق…</p>
           </Panel>
         )}
 
-        {me && (
-          <Panel className="grid gap-3 p-4">
+        {me && !drafting && (
+          <Panel className="grid shrink-0 gap-3 p-4">
             <div className="flex flex-wrap gap-2">
               {(snap?.players.filter((player) => player.teamId === me.teamId) ?? []).map((player) => (
                 <span
@@ -248,6 +254,22 @@ export function PlayClient() {
               </Button>
             )}
           </Panel>
+        )}
+
+        {me && drafting && (
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+            {(snap?.players.filter((player) => player.teamId === me.teamId) ?? []).map((player) => (
+              <span
+                key={player.id}
+                className={`chip px-2 py-0.5 text-[11px] ${player.connected ? "" : "opacity-40"} ${
+                  player.isLeader ? "chip-accent" : ""
+                }`}
+              >
+                {player.name}
+                {player.isLeader ? " ★" : ""}
+              </span>
+            ))}
+          </div>
         )}
 
         <PlayStage
@@ -342,7 +364,7 @@ function PlayStage({
   const optionSelect = canAnswer && (snap.mode === "choices" || snap.mode === "classic");
 
   return (
-    <div className="grid flex-1 gap-4">
+    <div className={`grid min-h-0 flex-1 gap-4 ${snap.phase === "draft" ? "content-stretch" : ""}`}>
       {(snap.phase === "lobby" || snap.phase === "connect") && (
         <Panel className="p-5 text-center">
           <p className="text-lg font-black">
@@ -357,41 +379,52 @@ function PlayStage({
       )}
 
       {snap.phase === "draft" && snap.draft && (
-        <Panel className="grid gap-3 p-5">
-          <p className="text-lg font-black">
-            {turnTeam
-              ? `دور ${turnTeam.name}`
-              : snap.draft.optional
-                ? "دور المقدم (اختياري)"
-                : "دور المقدم"}
-          </p>
-          <p className="text-xs text-muted">
-            مختار {snap.draft.picks.length} · متناوب بين الفريقين · آخر اختيار للمقدم
-          </p>
+        <Panel className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-4">
+          <div className="shrink-0 space-y-1">
+            <p className="text-lg font-black leading-tight">
+              {turnTeam
+                ? `دور ${turnTeam.name}`
+                : snap.draft.optional
+                  ? "دور المقدم (اختياري)"
+                  : "دور المقدم"}
+            </p>
+            <p className="text-xs leading-5 text-muted">
+              مختار {snap.draft.picks.length}
+              {snap.draft.target > 0 ? ` / ${snap.draft.target}` : ""} · متناوب بين الفريقين · آخر
+              اختيار للمقدم
+            </p>
+          </div>
           {snap.draft.picks.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {snap.draft.picks.map((pick) => (
-                <span key={pick.category} className="chip px-2 py-1 text-xs">
-                  {pick.category}
-                </span>
-              ))}
+            <div className="-mx-1 flex shrink-0 gap-1.5 overflow-x-auto px-1 pb-0.5">
+              {snap.draft.picks.map((pick) => {
+                const team = pick.teamIndex == null ? null : snap.teams[pick.teamIndex];
+                return (
+                  <span
+                    key={pick.category}
+                    className="chip shrink-0 px-2.5 py-1 text-xs font-bold"
+                    style={team ? { boxShadow: `inset 5px 0 0 ${team.color}` } : undefined}
+                  >
+                    {pick.category}
+                  </span>
+                );
+              })}
             </div>
           )}
           {myDraftTurn ? (
-            <div className="grid max-h-72 gap-2 overflow-y-auto">
+            <div className="grid min-h-0 flex-1 content-start gap-1.5 overflow-y-auto overscroll-contain pe-1">
               {snap.draft.remaining.map((category) => (
                 <button
                   key={category}
                   type="button"
                   onClick={() => onPickCategory(category, Date.now())}
-                  className="board-btn px-4 py-3 text-right text-sm font-bold"
+                  className="board-btn shrink-0 px-3 py-2.5 text-right text-sm font-bold leading-snug"
                 >
                   {category}
                 </button>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted">
+            <p className="shrink-0 text-sm text-muted">
               {me?.isLeader
                 ? "انتظر دور فريقك لاختيار فئة."
                 : "القائد يختار الفئة عندما يحين دور فريقكم."}
