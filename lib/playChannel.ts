@@ -41,6 +41,7 @@ export function playUrl(room: string) {
 }
 
 export function playerId() {
+  if (typeof window === "undefined") return "";
   const existing = sessionStorage.getItem(STORAGE.playPlayer);
   if (existing) return existing;
   const next = `p${createRoomCode()}`;

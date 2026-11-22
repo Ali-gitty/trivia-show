@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { openPlayLink, playerId, type PlayClientWire, type RelayStatus } from "@/lib/playChannel";
 import { readRoomParam } from "@/lib/screenChannel";
 import type { PlaySnapshot } from "@/lib/playSnapshot";
@@ -9,10 +9,11 @@ import { Button, Panel } from "./ui";
 type Step = "room" | "name" | "team" | "live";
 
 export function PlayClient() {
-  const id = useMemo(() => playerId(), []);
-  const [step, setStep] = useState<Step>(() => (readRoomParam() ? "name" : "room"));
-  const [roomInput, setRoomInput] = useState(readRoomParam);
-  const [room, setRoom] = useState(readRoomParam);
+  const [ready, setReady] = useState(false);
+  const [id, setId] = useState("");
+  const [step, setStep] = useState<Step>("room");
+  const [roomInput, setRoomInput] = useState("");
+  const [room, setRoom] = useState("");
   const [name, setName] = useState("");
   const [relay, setRelay] = useState<RelayStatus>("off");
   const [snap, setSnap] = useState<PlaySnapshot | null>(null);
@@ -22,6 +23,15 @@ export function PlayClient() {
   const linkRef = useRef<ReturnType<typeof openPlayLink> | null>(null);
   const seqRef = useRef(0);
 
+  useEffect(() => {
+    const code = readRoomParam();
+    setId(playerId());
+    setRoomInput(code);
+    setRoom(code);
+    setStep(code ? "name" : "room");
+    setReady(true);
+  }, []);
+
   const me = snap?.players.find((player) => player.id === id) ?? null;
   const myTeam = snap?.teams.find((team) => team.id === me?.teamId) ?? null;
 
@@ -30,7 +40,7 @@ export function PlayClient() {
   }, []);
 
   useEffect(() => {
-    if (!room) return;
+    if (!ready || !id || !room) return;
     seqRef.current = 0;
     const link = openPlayLink(room, setRelay);
     linkRef.current = link;
@@ -50,10 +60,10 @@ export function PlayClient() {
       link.close();
       linkRef.current = null;
     };
-  }, [id, room, send]);
+  }, [id, ready, room, send]);
 
   useEffect(() => {
-    if (!joinedTeamId || !room || !name.trim()) return;
+    if (!ready || !id || !joinedTeamId || !room || !name.trim()) return;
     send({
       type: "join",
       playerId: id,
@@ -61,7 +71,15 @@ export function PlayClient() {
       teamId: joinedTeamId,
       at: Date.now(),
     });
-  }, [id, joinedTeamId, name, relay, room, send]);
+  }, [id, joinedTeamId, name, ready, relay, room, send]);
+
+  if (!ready) {
+    return (
+      <Shell>
+        <p className="text-sm text-muted">جارٍ التجهيز…</p>
+      </Shell>
+    );
+  }
 
   const joinRoom = () => {
     const next = roomInput.trim().toUpperCase();
