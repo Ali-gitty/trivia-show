@@ -10,6 +10,7 @@ export function Scoreboard() {
   const { dispatch, state } = useGame();
   const { live, openLink, viewers } = useTv();
   const picking = state.phase === "board" ? state.teams[state.activeTeamIndex] : null;
+  const phones = state.players.filter((player) => player.connected).length;
 
   return (
     <div className="board-bar sticky top-0 z-20 px-3 py-3">
@@ -52,7 +53,11 @@ export function Scoreboard() {
           className="board-btn board-btn-ghost px-3 py-3 text-sm"
         >
           <Tv size={18} />
-          {live ? (viewers > 0 ? "التلفاز متصل" : "بانتظار التلفاز") : "شاشة التلفاز"}
+          {live
+            ? viewers > 0 || phones > 0
+              ? `متصل${viewers > 0 ? " · تلفاز" : ""}${phones > 0 ? ` · ${phones} جوال` : ""}`
+              : "بانتظار الاتصال"
+            : "تلفاز / جوالات"}
         </button>
         <button
           type="button"

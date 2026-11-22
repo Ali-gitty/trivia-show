@@ -14,15 +14,19 @@ import {
 import { Copy, Monitor, Tv } from "lucide-react";
 import { encode } from "uqr";
 import { STORAGE } from "@/lib/bank";
+import { playUrl } from "@/lib/playChannel";
 import { createRoomCode, openScreenLink, screenUrl, type RelayStatus } from "@/lib/screenChannel";
 import { buildSnapshot } from "@/lib/screenSnapshot";
 import { useTheme } from "./ThemeProvider";
 import { useGame } from "./GameProvider";
+import { PlayBridge } from "./PlayBridge";
 import { Button, Dialog, Panel } from "./ui";
 
 type TvApi = {
   live: boolean;
   viewers: number;
+  room: string;
+  playLink: string;
   openLink: () => void;
 };
 
@@ -117,6 +121,8 @@ export function TvBridge({ children }: { children: ReactNode }) {
   }, [currentQuestion, live, state, theme.palette, theme.pattern]);
 
   const url = room ? screenUrl(room) : "";
+  const phones = room ? playUrl(room) : "";
+  const connectedPlayers = state.players.filter((player) => player.connected).length;
 
   const openLink = useCallback(() => {
     const next = room || createRoomCode();
@@ -137,36 +143,67 @@ export function TvBridge({ children }: { children: ReactNode }) {
     () => ({
       live,
       viewers,
+      room,
+      playLink: phones,
       openLink,
     }),
-    [live, openLink, viewers],
+    [live, openLink, phones, room, viewers],
   );
 
   return (
     <TvContext.Provider value={api}>
       {children}
+      {live && room ? <PlayBridge room={room} live={live} /> : null}
       {open && (
         <Dialog titleId="tv-link-title" onClose={() => setOpen(false)}>
           <Panel className="grid max-h-[min(92dvh,46rem)] w-full max-w-xl gap-4 overflow-y-auto p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="kicker">عرض منفصل</p>
-                <h2 id="tv-link-title" className="mt-2 text-2xl font-black">شاشة التلفاز</h2>
+                <p className="kicker">عرض واتصال</p>
+                <h2 id="tv-link-title" className="mt-2 text-2xl font-black">التلفاز والجوالات</h2>
               </div>
               <Tv aria-hidden />
             </div>
             <p className="text-sm leading-7 text-muted">
-              انقل نافذة الشاشة إلى التلفاز، وأبقِ هذه النافذة على الآيباد. معاينة الإجابة ومعيار التحكيم يظهران هنا فقط، ويصلان إلى التلفاز بعد الكشف للجميع.
+              نفس الرمز للتلفاز ولجوالات اللاعبين. الشاشة للعرض فقط؛ الجوال للقراءة والجرس وإرسال الإجابات.
             </p>
             <div className="flex flex-wrap items-center gap-4">
-              {url && <QrMark value={url} />}
+              {url && <QrMark value={url} label="رمز الاستجابة للشاشة" />}
               <div className="grid gap-2">
-                <p className="text-xs text-muted">رمز الشاشة</p>
+                <p className="text-xs text-muted">رمز الغرفة</p>
                 <p className="text-4xl font-black tracking-[0.2em]">{room}</p>
                 <p className="chip px-3 py-1 text-sm">
                   {viewers > 0 ? "التلفاز متصل" : "بانتظار نافذة الشاشة"}
+                  {connectedPlayers > 0 ? ` · ${connectedPlayers} لاعب` : ""}
                   {relay === "live" ? " · الرابط الخارجي جاهز" : relay === "connecting" ? " · جارٍ وصل الرابط" : ""}
                 </p>
+              </div>
+            </div>
+            <div className="grid gap-3 rounded-2xl border-[3px] border-ink bg-paper p-4">
+              <p className="text-sm font-black">جوالات اللاعبين</p>
+              <div className="flex flex-wrap items-center gap-4">
+                {phones && <QrMark value={phones} label="رمز استجابة اللاعبين" />}
+                <div className="grid flex-1 gap-2">
+                  <input
+                    readOnly
+                    value={phones}
+                    className="field px-3 py-2 text-left text-sm"
+                    aria-label="رابط اللاعبين"
+                    dir="ltr"
+                  />
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(phones).then(() => {
+                        setCopied(true);
+                        window.setTimeout(() => setCopied(false), 1500);
+                      });
+                    }}
+                  >
+                    <Copy size={16} />
+                    {copied ? "تم النسخ" : "نسخ رابط الجوال"}
+                  </Button>
+                </div>
               </div>
             </div>
             <input readOnly value={url} className="field px-3 py-2 text-left text-sm" aria-label="رابط الشاشة" dir="ltr" />
@@ -183,18 +220,6 @@ export function TvBridge({ children }: { children: ReactNode }) {
                 <Monitor size={16} />
                 فتح نافذة الشاشة
               </Button>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  void navigator.clipboard?.writeText(url).then(() => {
-                    setCopied(true);
-                    window.setTimeout(() => setCopied(false), 1500);
-                  });
-                }}
-              >
-                <Copy size={16} />
-                {copied ? "تم النسخ" : "نسخ الرابط"}
-              </Button>
               <Button variant="danger" onClick={stop}>
                 إيقاف البث
               </Button>
@@ -206,7 +231,7 @@ export function TvBridge({ children }: { children: ReactNode }) {
   );
 }
 
-function QrMark({ value }: { value: string }) {
+function QrMark({ value, label }: { value: string; label: string }) {
   const qr = encode(value, { ecc: "M", border: 2 });
   const cells = qr.data.flatMap((row, y) =>
     row.flatMap((on, x) => (on ? [<rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} />] : [])),
@@ -214,9 +239,9 @@ function QrMark({ value }: { value: string }) {
   return (
     <svg
       role="img"
-      aria-label="رمز الاستجابة للشاشة"
+      aria-label={label}
       viewBox={`0 0 ${qr.size} ${qr.size}`}
-      className="h-40 w-40 shrink-0 rounded-2xl bg-white p-2"
+      className="h-36 w-36 shrink-0 rounded-2xl bg-white p-2"
     >
       <rect width={qr.size} height={qr.size} fill="#ffffff" />
       <g fill="#1a120b">{cells}</g>

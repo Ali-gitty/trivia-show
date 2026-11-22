@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen, RotateCcw, Settings2, Tv, Users, Volume2, VolumeX } from "lucide-react";
+import { BookOpen, RotateCcw, Settings2, Smartphone, Tv, Users, Volume2, VolumeX } from "lucide-react";
 import { useTv } from "./TvBridge";
 import { useGame } from "./GameProvider";
 import { Button, Panel } from "./ui";
@@ -86,10 +86,39 @@ export function SetupLobby() {
           </Button>
           <Button variant="ghost" onClick={openLink}>
             <Tv size={16} />
-            شاشة التلفاز
+            تلفاز / جوالات
           </Button>
         </div>
       </header>
+
+      <Panel className="grid gap-3 p-5">
+        <h2 className="flex items-center gap-2 text-xl font-black">
+          <Smartphone size={18} /> اتصال اللاعبين
+        </h2>
+        <p className="text-sm leading-7 text-muted">
+          اختياري في كل الأوضاع — يمكنهم القراءة والإرسال أو إخبارك شفهياً. في وضع الجرس يظهر زر جرس على
+          الجوال ويُعلَن من ضغط أولاً.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={`chip px-3 py-1.5 text-sm font-black ${state.settings.phoneAnswers === "open" ? "chip-accent" : ""}`}
+            onClick={() => dispatch({ type: "SET_SETTINGS", settings: { phoneAnswers: "open" } })}
+          >
+            إجابات الجوال مسموحة
+          </button>
+          <button
+            type="button"
+            className={`chip px-3 py-1.5 text-sm font-black ${state.settings.phoneAnswers === "hostOnly" ? "chip-accent" : ""}`}
+            onClick={() => dispatch({ type: "SET_SETTINGS", settings: { phoneAnswers: "hostOnly" } })}
+          >
+            المقدم فقط (قراءة + جرس)
+          </button>
+          <Button variant="ghost" onClick={openLink}>
+            فتح رمز الغرفة / QR
+          </Button>
+        </div>
+      </Panel>
 
       <div className="grid gap-4 md:grid-cols-2">
         <ModeCard

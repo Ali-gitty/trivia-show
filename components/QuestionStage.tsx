@@ -119,7 +119,13 @@ export function QuestionStage() {
             )}
             {state.mode === "closest" && !state.answerRevealed && (
               <p className="shrink-0 text-xs text-muted sm:text-sm">
-                أقرب رقم صحيح يفوز — الفرق تخمّن، والمقدم يحكم بعد كشف الإجابة.
+                أقرب رقم صحيح يفوز — تخمينات الجوال تُحسب تلقائياً عند الكشف إن وُجدت.
+              </p>
+            )}
+
+            {state.remoteBuzz && (
+              <p className="chip chip-accent shrink-0 px-3 py-2 text-sm font-bold">
+                ضغط أولاً: {state.remoteBuzz.playerName}
               </p>
             )}
 
@@ -130,6 +136,25 @@ export function QuestionStage() {
             )}
 
             {state.optionsVisible && <ChoiceGrid options={state.optionsOrder} compact />}
+
+            {Object.keys(state.submissions).length > 0 && (
+              <div className="grid shrink-0 gap-1 rounded-2xl border-[3px] border-ink bg-paper px-3 py-2 text-sm">
+                <p className="text-xs font-black text-muted">إجابات الجوال</p>
+                {state.teams.map((team) => {
+                  const entry = state.submissions[team.id];
+                  if (!entry) return null;
+                  const player = state.players.find((item) => item.id === entry.playerId);
+                  return (
+                    <p key={team.id}>
+                      <span style={{ color: team.color }} className="font-bold">
+                        {team.name}
+                      </span>
+                      {player ? ` (${player.name})` : ""}: {entry.text}
+                    </p>
+                  );
+                })}
+              </div>
+            )}
 
             {state.hostPeek && !state.answerRevealed && (
               <p className="shrink-0 rounded-2xl border-[3px] border-dashed border-ink bg-paper px-3 py-2 text-sm">
@@ -174,8 +199,17 @@ export function QuestionStage() {
               )}
 
               {state.phase === "adjudicate" && !state.answerRevealed && (
-                <Button className="h-11 w-full text-base" onClick={() => dispatch({ type: "REVEAL" })}>
-                  {activity ? "كشف معيار التحكيم" : "كشف الإجابة"}
+                <Button
+                  className="h-11 w-full text-base"
+                  onClick={() =>
+                    dispatch({ type: "REVEAL", correctAnswer: currentQuestion.answer })
+                  }
+                >
+                  {activity
+                    ? "كشف معيار التحكيم"
+                    : state.mode === "closest"
+                      ? "كشف واحتساب الأقرب"
+                      : "كشف الإجابة"}
                 </Button>
               )}
 

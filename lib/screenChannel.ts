@@ -25,7 +25,7 @@ export function createRoomCode() {
 }
 
 export function screenUrl(room: string) {
-  const path = window.location.pathname.replace(/\/screen\/.*$/, "/");
+  const path = window.location.pathname.replace(/\/(screen|play)\/.*$/, "/");
   const root = path.endsWith("/") ? path : `${path.slice(0, path.lastIndexOf("/") + 1)}`;
   return `${window.location.origin}${root}screen/?room=${encodeURIComponent(room)}`;
 }

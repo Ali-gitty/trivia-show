@@ -110,6 +110,12 @@ function sanitize(input: GameState): GameState {
     rangeVisible: Boolean(input.rangeVisible),
     rangeLow: typeof input.rangeLow === "number" && Number.isFinite(input.rangeLow) ? input.rangeLow : null,
     rangeHigh: typeof input.rangeHigh === "number" && Number.isFinite(input.rangeHigh) ? input.rangeHigh : null,
+    players: Array.isArray(input.players) ? input.players : [],
+    submissions:
+      input.submissions && typeof input.submissions === "object" && !Array.isArray(input.submissions)
+        ? input.submissions
+        : {},
+    remoteBuzz: input.remoteBuzz && typeof input.remoteBuzz === "object" ? input.remoteBuzz : null,
     settings: normalizeHostSettings(input.settings),
     pointMultiplier:
       Number.isInteger(Number(input.pointMultiplier)) && Number(input.pointMultiplier) >= 1

@@ -5,12 +5,14 @@ import {
   freshCooldowns,
   normalizeHostSettings,
   TEAM_NAMES,
+  type AnswerSubmission,
   type GameState,
   type HostSettings,
   type Outcome,
   type Phase,
   EXTRA_TIME_SECONDS,
   MAX_BUZZER_CATEGORIES,
+  type PlayerSeat,
   type PowerKind,
   type Question,
   type SoundName,
@@ -18,7 +20,7 @@ import {
   type TeamPowerKind,
 } from "./types";
 import { classicDraftSteps } from "./matchFormat";
-import { buildAnswerRange } from "./numberRange";
+import { buildAnswerRange, parseAnswerNumber } from "./numberRange";
 
 function usesClassicFlow(mode: GameState["mode"]) {
   return mode === "classic" || mode === "closest" || mode === "choices";
@@ -66,7 +68,7 @@ export type Action =
     }
   | { type: "BUZZ"; teamIndex: number }
   | { type: "STEAL"; teamIndex: number }
-  | { type: "REVEAL" }
+  | { type: "REVEAL"; correctAnswer?: string }
   | { type: "AWARD"; teamIndex: number | null }
   | { type: "BUZZ_CORRECT" }
   | { type: "BUZZ_WRONG" }
@@ -78,7 +80,27 @@ export type Action =
   | { type: "RESET_COOLDOWN"; teamId: string; kind: PowerKind }
   | { type: "END_MATCH" }
   | { type: "DOUBLE_REMAINING" }
-  | { type: "REPLAY" };
+  | { type: "REPLAY" }
+  | {
+      type: "PLAYER_JOIN";
+      playerId: string;
+      name: string;
+      teamId: string;
+      at: number;
+    }
+  | { type: "PLAYER_LEAVE"; playerId: string }
+  | { type: "PLAYER_PING"; playerId: string; at: number }
+  | { type: "PLAYER_SET_LEADER"; teamId: string; targetId: string }
+  | { type: "PLAYER_BUZZ"; playerId: string; at: number }
+  | {
+      type: "PLAYER_SUBMIT";
+      playerId: string;
+      kind: AnswerSubmission["kind"];
+      text: string;
+      number: number | null;
+      at: number;
+    }
+  | { type: "MARK_PLAYERS_STALE"; now: number; timeoutMs?: number };
 
 export function createInitialState(): GameState {
   return {
@@ -113,6 +135,9 @@ export function createInitialState(): GameState {
     outcome: null,
     notice: null,
     pointMultiplier: 1,
+    players: [],
+    submissions: {},
+    remoteBuzz: null,
   };
 }
 
@@ -207,7 +232,59 @@ function questionFields() {
     usedThisQuestion: [] as GameState["usedThisQuestion"],
     outcome: null as Outcome | null,
     notice: null as string | null,
+    submissions: {} as GameState["submissions"],
+    remoteBuzz: null as GameState["remoteBuzz"],
   };
+}
+
+function sanitizePlayerName(name: string) {
+  return name.trim().slice(0, 24) || "لاعب";
+}
+
+function withLeader(players: PlayerSeat[], teamId: string, targetId: string) {
+  return players.map((player) =>
+    player.teamId === teamId ? { ...player, isLeader: player.id === targetId } : player,
+  );
+}
+
+/** Closest numeric submissions; returns team index or null on tie/missing. */
+export function closestWinnerIndex(state: GameState, answer: string) {
+  const target = parseAnswerNumber(answer);
+  if (target == null) return null;
+  const scored = state.teams
+    .map((team, index) => {
+      const entry = state.submissions[team.id];
+      if (!entry || entry.number == null || !Number.isFinite(entry.number)) return null;
+      return { index, distance: Math.abs(entry.number - target) };
+    })
+    .filter((item): item is { index: number; distance: number } => item != null);
+  if (scored.length < 2) return null;
+  scored.sort((a, b) => a.distance - b.distance || a.index - b.index);
+  if (scored[0]!.distance === scored[1]!.distance) return null;
+  return scored[0]!.index;
+}
+
+function canSubmit(state: GameState, player: PlayerSeat) {
+  if (state.settings.phoneAnswers === "hostOnly") return false;
+  if (state.mode === "buzzer") {
+    return (
+      state.phase === "buzzLocked" &&
+      state.remoteBuzz?.playerId === player.id &&
+      state.buzzingTeamIndex != null &&
+      state.teams[state.buzzingTeamIndex]?.id === player.teamId
+    );
+  }
+  if (!player.isLeader) return false;
+  if (state.phase !== "primary" && state.phase !== "steal" && state.phase !== "adjudicate") {
+    return false;
+  }
+  if (usesClassicFlow(state.mode)) {
+    const eligible = powerEligible(state);
+    const teamIndex = state.teams.findIndex((team) => team.id === player.teamId);
+    if (state.phase === "adjudicate") return teamIndex >= 0;
+    return eligible.includes(teamIndex);
+  }
+  return false;
 }
 
 function decay(teams: Team[], used: GameState["usedThisQuestion"]) {
@@ -393,6 +470,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         phase: "draft",
         mode: action.mode,
         teams,
+        players: [],
       };
     }
     case "PICK_CATEGORY": {
@@ -616,6 +694,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         ...state,
         phase: "buzzLocked",
         buzzingTeamIndex: action.teamIndex,
+        remoteBuzz: null,
         notice: null,
         cue: sound(state, "buzz"),
       };
@@ -625,11 +704,42 @@ export function gameReducer(state: GameState, action: Action): GameState {
       const spent = spend(state, action.teamIndex, "steal");
       return { ...spent, buzzingTeamIndex: action.teamIndex, cue: sound(state, "steal") };
     }
-    case "REVEAL":
+    case "REVEAL": {
       if (state.phase !== "adjudicate" && state.phase !== "resolved" && state.phase !== "buzzLocked") {
         return state;
       }
-      return { ...state, answerRevealed: true };
+      const revealed = { ...state, answerRevealed: true };
+      if (state.phase === "adjudicate" && state.mode === "closest" && action.correctAnswer) {
+        const numericCount = state.teams.filter(
+          (team) => state.submissions[team.id]?.number != null,
+        ).length;
+        if (numericCount >= 2) {
+          const winner = closestWinnerIndex(revealed, action.correctAnswer);
+          const points = currentPoints(revealed);
+          const teams =
+            winner == null
+              ? revealed.teams
+              : revealed.teams.map((team, index) =>
+                  index === winner ? { ...team, score: clampScore(team.score + points) } : team,
+                );
+          const nextPicker = (revealed.activeTeamIndex + 1) % Math.max(1, revealed.teams.length);
+          return settle(
+            {
+              ...revealed,
+              teams,
+              notice:
+                winner == null
+                  ? "تعادل في الأقرب — بدون نقاط"
+                  : `الأقرب: ${revealed.teams[winner]?.name ?? ""}`,
+            },
+            "played",
+            nextPicker,
+            winner == null ? "wrong" : "correct",
+          );
+        }
+      }
+      return revealed;
+    }
     case "AWARD": {
       if (state.phase !== "adjudicate" || !state.answerRevealed) return state;
       const points = currentPoints(state);
@@ -677,6 +787,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         teams,
         lockedOutTeamIds: [...state.lockedOutTeamIds, team.id],
         buzzingTeamIndex: null,
+        remoteBuzz: null,
         phase: "buzzOpen",
         notice: `خصم ${penalty} من ${team.name}`,
         cue: sound(state, "wrong"),
@@ -755,6 +866,142 @@ export function gameReducer(state: GameState, action: Action): GameState {
         settings: state.settings,
         cue: state.cue,
       };
+    case "PLAYER_JOIN": {
+      if (!state.teams.some((team) => team.id === action.teamId)) return state;
+      const name = sanitizePlayerName(action.name);
+      const existing = state.players.find((player) => player.id === action.playerId);
+      if (existing) {
+        const players = state.players.map((player) =>
+          player.id === action.playerId
+            ? {
+                ...player,
+                name,
+                teamId: action.teamId,
+                connected: true,
+                lastSeen: action.at,
+              }
+            : player,
+        );
+        const teamHasLeader = players.some(
+          (player) => player.teamId === action.teamId && player.isLeader && player.connected,
+        );
+        return {
+          ...state,
+          players: teamHasLeader ? players : withLeader(players, action.teamId, action.playerId),
+        };
+      }
+      const alone = !state.players.some((player) => player.teamId === action.teamId && player.connected);
+      const seat: PlayerSeat = {
+        id: action.playerId,
+        name,
+        teamId: action.teamId,
+        isLeader: alone,
+        connected: true,
+        lastSeen: action.at,
+      };
+      return { ...state, players: [...state.players, seat] };
+    }
+    case "PLAYER_LEAVE": {
+      const leaving = state.players.find((player) => player.id === action.playerId);
+      if (!leaving) return state;
+      let players = state.players.map((player) =>
+        player.id === action.playerId ? { ...player, connected: false, isLeader: false } : player,
+      );
+      if (leaving.isLeader) {
+        const next = players.find((player) => player.teamId === leaving.teamId && player.connected);
+        if (next) players = withLeader(players, leaving.teamId, next.id);
+      }
+      return { ...state, players };
+    }
+    case "PLAYER_PING": {
+      if (!state.players.some((player) => player.id === action.playerId)) return state;
+      return {
+        ...state,
+        players: state.players.map((player) =>
+          player.id === action.playerId
+            ? { ...player, connected: true, lastSeen: action.at }
+            : player,
+        ),
+      };
+    }
+    case "PLAYER_SET_LEADER": {
+      if (!state.players.some((player) => player.id === action.targetId && player.teamId === action.teamId)) {
+        return state;
+      }
+      return { ...state, players: withLeader(state.players, action.teamId, action.targetId) };
+    }
+    case "PLAYER_BUZZ": {
+      if (state.phase !== "buzzOpen") return state;
+      const player = state.players.find((item) => item.id === action.playerId && item.connected);
+      if (!player) return state;
+      const teamIndex = state.teams.findIndex((team) => team.id === player.teamId);
+      if (teamIndex < 0 || state.lockedOutTeamIds.includes(player.teamId)) return state;
+      return {
+        ...state,
+        phase: "buzzLocked",
+        buzzingTeamIndex: teamIndex,
+        remoteBuzz: {
+          playerId: player.id,
+          playerName: player.name,
+          teamId: player.teamId,
+          at: action.at,
+        },
+        notice: `ضغط أولاً: ${player.name}`,
+        cue: sound(state, "buzz"),
+      };
+    }
+    case "PLAYER_SUBMIT": {
+      const player = state.players.find((item) => item.id === action.playerId && item.connected);
+      if (!player || !canSubmit(state, player)) return state;
+      if (action.kind === "number" && (action.number == null || !Number.isFinite(action.number))) {
+        return state;
+      }
+      const text = action.text.trim().slice(0, 120);
+      if (!text && action.kind !== "number") return state;
+      const number =
+        action.kind === "number"
+          ? action.number
+          : action.kind === "text"
+            ? parseAnswerNumber(text)
+            : null;
+      const entry: AnswerSubmission = {
+        playerId: player.id,
+        teamId: player.teamId,
+        kind: action.kind,
+        text: action.kind === "number" && action.number != null ? String(action.number) : text,
+        number: number != null && Number.isFinite(number) ? number : null,
+        at: action.at,
+      };
+      return {
+        ...state,
+        submissions: { ...state.submissions, [player.teamId]: entry },
+        notice: `إجابة ${player.name} وصلت`,
+      };
+    }
+    case "MARK_PLAYERS_STALE": {
+      const timeout = action.timeoutMs ?? 7000;
+      let changed = false;
+      const players = state.players.map((player) => {
+        if (!player.connected) return player;
+        if (action.now - player.lastSeen <= timeout) return player;
+        changed = true;
+        return { ...player, connected: false };
+      });
+      if (!changed) return state;
+      let next = players;
+      for (const team of state.teams) {
+        const leader = next.find((player) => player.teamId === team.id && player.isLeader);
+        if (leader && !leader.connected) {
+          const replacement = next.find((player) => player.teamId === team.id && player.connected);
+          next = replacement
+            ? withLeader(next, team.id, replacement.id)
+            : next.map((player) =>
+                player.teamId === team.id ? { ...player, isLeader: false } : player,
+              );
+        }
+      }
+      return { ...state, players: next };
+    }
     default:
       return state;
   }
