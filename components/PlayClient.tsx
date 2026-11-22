@@ -151,6 +151,7 @@ export function PlayClient() {
             {relay === "live" ? "" : " · جارٍ الاتصال…"}
           </p>
           <h1 className="text-2xl font-black">اسمك وفريقك</h1>
+          <p className="text-sm text-muted">اسمك يظهر على التلفاز فور انضمامك.</p>
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}

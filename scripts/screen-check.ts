@@ -95,6 +95,36 @@ const ranged = buildSnapshot(state, question, "kraft");
 if (ranged.question?.range !== "1000 – 1300") throw new Error("range missing from snapshot");
 if (ranged.question.answer !== null) throw new Error("closest answer leaked before reveal");
 
+const lobby = buildSnapshot(
+  {
+    ...state,
+    phase: "connect",
+    players: [
+      {
+        id: "p1",
+        name: "سارة",
+        teamId: "a",
+        isLeader: true,
+        connected: true,
+        lastSeen: 1,
+      },
+      {
+        id: "p2",
+        name: "نورة",
+        teamId: "b",
+        isLeader: true,
+        connected: true,
+        lastSeen: 1,
+      },
+    ],
+  },
+  null,
+  "kraft",
+);
+if (lobby.players.length !== 2 || lobby.players[0]?.name !== "سارة") {
+  throw new Error("connect lobby players missing from TV snapshot");
+}
+
 const published = publishPacket("trivia-show/screen/TEST01", JSON.stringify({ type: "state", seq: 1 }));
 const parsed = parsePackets(published);
 if (parsed.packets.length !== 1 || parsed.packets[0]?.type !== 3) throw new Error("publish packet");

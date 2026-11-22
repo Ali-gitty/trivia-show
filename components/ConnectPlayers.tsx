@@ -28,7 +28,8 @@ export function ConnectPlayers() {
         <p className="kicker">قبل سحب الفئات</p>
         <h1 className="mt-3 text-4xl font-black">انضمام اللاعبين</h1>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-muted">
-          امسح رمز الجوال وانضم للفرق. عندما يلتحق الجميع، اضغط ابدأ سحب الفئات.
+          امسح رمز الجوال وانضم للفرق. أسماء اللاعبين تظهر على التلفاز فور الاتصال — عندما يلتحق الجميع،
+          ابدأ اللعبة.
         </p>
       </header>
 

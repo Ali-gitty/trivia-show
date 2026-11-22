@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Check, Minus, Volume2 } from "lucide-react";
 import { boardLayout } from "@/lib/boardLayout";
 import { CategoryLabel } from "@/lib/categoryIcons";
@@ -97,8 +98,9 @@ export function TvStage() {
           صوت الشاشة
         </button>
       )}
-      {!snap && <Waiting />}
-      {(snap?.phase === "lobby" || snap?.phase === "connect") && <Waiting />}
+      {!snap && <Waiting room={room} />}
+      {snap?.phase === "lobby" && <Waiting room={room} />}
+      {snap?.phase === "connect" && <ConnectLobby snap={snap} room={room} />}
       {snap?.phase === "draft" && <DraftView snap={snap} />}
       {snap &&
         snap.phase !== "lobby" &&
@@ -110,12 +112,88 @@ export function TvStage() {
   );
 }
 
-function Waiting() {
+function Waiting({ room }: { room?: string }) {
   return (
     <div className="grid min-h-dvh place-content-center gap-3 px-6 text-center">
       <p className="kicker">شاشة التلفاز</p>
       <h1 className="text-5xl font-black">في انتظار المقدم</h1>
       <p className="text-lg text-muted">انضموا من الجوال قبل سحب الفئات — الإجابة تبقى على الآيباد حتى الكشف.</p>
+      {room ? (
+        <p className="mt-4 text-4xl font-black tracking-[0.2em]" dir="ltr">
+          {room}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function ConnectLobby({ snap, room }: { snap: ScreenSnapshot; room: string }) {
+  const connected = snap.players.filter((player) => player.connected);
+  const byTeam = snap.teams.map((team) => ({
+    team,
+    members: connected.filter((player) => player.teamId === team.id),
+  }));
+
+  return (
+    <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-8 px-6 py-10">
+      <header className="text-center">
+        <p className="kicker">قاعة الانتظار</p>
+        <h1 className="mt-3 text-5xl font-black sm:text-6xl">انضموا من الجوال</h1>
+        <p className="mt-3 text-lg text-muted">الأسماء تظهر هنا فور الاتصال — انتظروا إشارة المقدم.</p>
+        <p className="mt-6 text-6xl font-black tracking-[0.28em] sm:text-7xl" dir="ltr">
+          {room}
+        </p>
+        <p className="mt-4 text-2xl font-black">
+          {connected.length > 0 ? `${connected.length} لاعب متصل` : "بانتظار أول لاعب…"}
+        </p>
+      </header>
+
+      <div className="grid flex-1 gap-6 md:grid-cols-2">
+        {byTeam.map(({ team, members }) => (
+          <section
+            key={team.id}
+            className="board-card flex min-h-64 flex-col gap-4 p-5"
+            style={{ boxShadow: `inset 10px 0 0 ${team.color}` }}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-3xl font-black" style={{ color: team.color }}>
+                {team.name}
+              </h2>
+              <span className="text-lg font-bold text-muted">{members.length}</span>
+            </div>
+            {members.length === 0 ? (
+              <p className="text-xl text-muted">لا أحد بعد</p>
+            ) : (
+              <div className="flex flex-wrap content-start gap-3">
+                <AnimatePresence initial={false}>
+                  {members.map((player) => (
+                    <motion.span
+                      key={player.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.85, y: 12 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.22, ease: "easeOut" }}
+                      className="chip px-4 py-3 text-2xl font-black"
+                      style={{
+                        borderColor: team.color,
+                        boxShadow: `4px 4px 0 ${team.color}`,
+                      }}
+                    >
+                      {player.name}
+                      {player.isLeader ? " ★" : ""}
+                    </motion.span>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+          </section>
+        ))}
+      </div>
+
+      {connected.length === 0 && (
+        <p className="text-center text-xl text-muted">امسحوا رمز المقدم أو أدخلوا الرمز أعلاه على الجوال.</p>
+      )}
     </div>
   );
 }
