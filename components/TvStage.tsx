@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { Check, Minus, Volume2 } from "lucide-react";
 import { boardLayout } from "@/lib/boardLayout";
 import { CategoryLabel } from "@/lib/categoryIcons";
-import { POINT_VALUES } from "@/lib/types";
 import { facePoints, isQuestionPhase, unreachableLead } from "@/lib/gameReducer";
 import { openScreenLink, readRoomParam, viewerId } from "@/lib/screenChannel";
 import type { ScreenSnapshot } from "@/lib/screenSnapshot";
@@ -150,6 +149,7 @@ function MatchView({ snap }: { snap: ScreenSnapshot }) {
     if (!categories.includes(tile.category)) categories.push(tile.category);
   }
   const layout = boardLayout(categories.length);
+  const pointTiers = [...new Set(snap.board.map((tile) => tile.points))].sort((a, b) => a - b);
   return (
     <div className={asking ? "opacity-100" : undefined}>
       <ScoreStrip snap={snap} />
@@ -170,14 +170,14 @@ function MatchView({ snap }: { snap: ScreenSnapshot }) {
               key={category}
               className="grid h-full min-h-0 min-w-0"
               style={{
-                gridTemplateRows: `auto repeat(${POINT_VALUES.length}, minmax(0, 1fr))`,
+                gridTemplateRows: `auto repeat(${Math.max(pointTiers.length, 1)}, minmax(0, 1fr))`,
                 gap: layout.gap,
               }}
             >
               <h2 className={`cat-head grid place-items-center text-center font-black ${layout.headClass}`}>
                 <CategoryLabel category={category} stacked size={layout.labelSize} />
               </h2>
-              {POINT_VALUES.map((points) => {
+              {pointTiers.map((points) => {
                 const tile = snap.board.find((item) => item.category === category && item.points === points);
                 if (!tile) return <div key={points} className={`tile-spent ${layout.tileClass}`} />;
                 return (

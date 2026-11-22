@@ -73,11 +73,13 @@ export function buildBoard(
   categories: string[],
   questions: Question[],
   playedIds: number[] = [],
+  pointTiers: readonly Points[] = POINT_VALUES,
 ): { board: Tile[]; error: string | null } {
   void playedIds;
+  const tiers = pointTiers.length ? pointTiers : POINT_VALUES;
   const board: Tile[] = [];
   for (const category of categories) {
-    for (const points of POINT_VALUES) {
+    for (const points of tiers) {
       if (!tierAvailable(questions, category, points)) {
         return { board: [], error: `لا توجد أسئلة متاحة: ${category} / ${points}` };
       }

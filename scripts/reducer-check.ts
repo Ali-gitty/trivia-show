@@ -99,7 +99,11 @@ for (const category of categories.slice(0, 3)) {
 multi = gameReducer(multi, { type: "FINISH_DRAFT", questions, playedIds: [] });
 if (multi.board.length !== 15) throw new Error("multi board");
 
-let padded = gameReducer(createInitialState(), {
+let padded = {
+  ...createInitialState(),
+  settings: normalizeHostSettings({ format: "custom", categoryCount: 9 }),
+};
+padded = gameReducer(padded, {
   type: "START_DRAFT",
   mode: "buzzer",
   teams: [
@@ -131,6 +135,62 @@ const blocked = gameReducer(padded, {
 if (blocked.draftPicks.length !== 9) throw new Error("buzzer should stop after 9 categories");
 padded = gameReducer(padded, { type: "FINISH_DRAFT", questions: padQuestions, playedIds: [] });
 if (padded.board.length !== 45) throw new Error("nine-category board size");
+
+let classicNine = {
+  ...createInitialState(),
+  settings: normalizeHostSettings({ format: "custom", categoryCount: 9, pointTiers: [100, 200, 300, 400, 500] }),
+};
+classicNine = gameReducer(classicNine, {
+  type: "START_DRAFT",
+  mode: "classic",
+  teams: [
+    { name: "الأول", color: "#22d3ee" },
+    { name: "الثاني", color: "#fb923c" },
+  ],
+});
+for (const category of padCats) {
+  classicNine = gameReducer(classicNine, {
+    type: "PICK_CATEGORY",
+    category,
+    questions: padQuestions,
+    playedIds: [],
+  });
+}
+if (classicNine.phase !== "board" || classicNine.board.length !== 45) {
+  throw new Error("classic custom should accept 9 categories");
+}
+
+let blitzMatch = {
+  ...createInitialState(),
+  settings: normalizeHostSettings({ format: "blitz" }),
+};
+blitzMatch = gameReducer(blitzMatch, {
+  type: "START_DRAFT",
+  mode: "classic",
+  teams: [
+    { name: "الأول", color: "#22d3ee" },
+    { name: "الثاني", color: "#fb923c" },
+  ],
+});
+const blitzCats = padCats.slice(0, 3);
+const blitzQuestions = blitzCats.flatMap((category, categoryIndex) =>
+  ([100, 300, 500] as const).map((points, tier) => question(3000 + categoryIndex * 3 + tier, category, points)),
+);
+for (const category of blitzCats) {
+  blitzMatch = gameReducer(blitzMatch, {
+    type: "PICK_CATEGORY",
+    category,
+    questions: blitzQuestions,
+    playedIds: [],
+  });
+}
+if (blitzMatch.phase !== "board" || blitzMatch.board.length !== 9) throw new Error("blitz board should be 3×3");
+if (
+  blitzMatch.settings.primarySeconds !== 45 ||
+  blitzMatch.board.some((tile) => ![100, 300, 500].includes(tile.points))
+) {
+  throw new Error("blitz timers/tiers mismatch");
+}
 const buzzTile = multi.board.find((item) => item.points === 500)!;
 multi = gameReducer(multi, { type: "OPEN_TILE", tileId: buzzTile.id, questions, playedIds: [] });
 multi = gameReducer(multi, { type: "BUZZ", teamIndex: 0 });
@@ -180,8 +240,13 @@ const aloud = publicAnnouncement({
   answerRevealed: true,
 });
 if (!aloud.text.includes("الإجابة السرية")) throw new Error("speech skipped the revealed answer");
-const kept = normalizeHostSettings({ primarySeconds: 40, speech: true, speechRate: 1.1 });
+const kept = normalizeHostSettings({ format: "custom", primarySeconds: 40, speech: true, speechRate: 1.1 });
 if (!kept.speech || kept.speechRate !== 1.1 || kept.primarySeconds !== 40) throw new Error("settings dropped speech");
+const blitz = normalizeHostSettings({ format: "blitz", primarySeconds: 99, categoryCount: 9 });
+if (blitz.primarySeconds !== 45 || blitz.stealSeconds !== 10 || blitz.categoryCount !== 3) {
+  throw new Error("blitz preset should lock timers and categories");
+}
+if (blitz.pointTiers.join(",") !== "100,300,500") throw new Error("blitz tiers");
 if (optionDirection("4, 8, 15, 16, 23, 42") !== "ltr") throw new Error("numbers should stay left to right");
 if (numberSequence("4, 8, 15, 16, 23, 42")?.join("|") !== "4|8|15|16|23|42") throw new Error("number list split");
 if (optionDirection("الحضارة السومرية") !== "rtl") throw new Error("arabic choices should stay right to left");

@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { Dices, Search, Settings2 } from "lucide-react";
 import { categoryKind } from "@/lib/board";
 import { CategoryLabel } from "@/lib/categoryIcons";
-import { draftPlan } from "@/lib/gameReducer";
-import { CLASSIC_CATEGORY_COUNT, MAX_BUZZER_CATEGORIES } from "@/lib/types";
+import { draftCategoryTarget, draftPlan } from "@/lib/gameReducer";
+import { matchFormatOf } from "@/lib/matchFormat";
 import { useGame } from "./GameProvider";
 import { Button, Panel } from "./ui";
 
@@ -16,9 +16,11 @@ export function CategoryDraft() {
   const [query, setQuery] = useState("");
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const plan = draftPlan(state);
+  const target = draftCategoryTarget(state);
   const taken = new Set(state.draftPicks.map((pick) => pick.category));
   const hostTurn = plan?.teamIndex == null;
   const needle = query.trim();
+  const formatLabel = matchFormatOf(state.settings.format).label;
 
   const remaining = categories.filter((category) => {
     if (taken.has(category)) return false;
@@ -42,11 +44,11 @@ export function CategoryDraft() {
 
   const detail =
     state.mode === "classic"
-      ? "فريقان يختاران فئتين لكل منهما، ثم فئة أخيرة للمقدم."
-      : `كل فريق يختار فئة. يمكن للمقدم إضافة فئات حتى ${MAX_BUZZER_CATEGORIES} ثم بدء اللوحة.`;
+      ? `كلاسيكي · ${formatLabel} · ${target} فئات · ${state.settings.pointTiers.join(" / ")}`
+      : `جرس · ${formatLabel} · حتى ${target} فئات · ${state.settings.pointTiers.join(" / ")}`;
 
-  const atBuzzerCap = state.mode === "buzzer" && hostTurn && state.draftPicks.length >= MAX_BUZZER_CATEGORIES;
-  const canPick = Boolean(plan) && remaining.length > 0 && !atBuzzerCap;
+  const atCap = state.draftPicks.length >= target;
+  const canPick = Boolean(plan) && remaining.length > 0 && !(state.mode === "buzzer" && hostTurn && atCap);
 
   const pickRandomCategory = () => {
     if (!canPick) return;
@@ -100,7 +102,7 @@ export function CategoryDraft() {
           );
         })}
         <span className="chip chip-accent px-3 py-1 text-sm">
-          {state.draftPicks.length} / {state.mode === "classic" ? CLASSIC_CATEGORY_COUNT : MAX_BUZZER_CATEGORIES}
+          {state.draftPicks.length} / {target}
         </span>
       </div>
 
@@ -112,9 +114,7 @@ export function CategoryDraft() {
             role="tab"
             aria-selected={kindFilter === filter.id}
             onClick={() => setKindFilter(filter.id)}
-            className={`chip px-3 py-1.5 text-sm font-black ${
-              kindFilter === filter.id ? "chip-accent" : ""
-            }`}
+            className={`chip px-3 py-1.5 text-sm font-black ${kindFilter === filter.id ? "chip-accent" : ""}`}
           >
             {filter.label}
           </button>
@@ -132,9 +132,7 @@ export function CategoryDraft() {
         />
       </label>
 
-      {state.draftError && (
-        <p className="note-danger px-4 py-3 text-sm">{state.draftError}</p>
-      )}
+      {state.draftError && <p className="note-danger px-4 py-3 text-sm">{state.draftError}</p>}
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {visible.map((category) => {
@@ -144,15 +142,13 @@ export function CategoryDraft() {
             <button
               key={category}
               type="button"
-              disabled={Boolean(pick) || atBuzzerCap}
+              disabled={Boolean(pick) || (state.mode === "buzzer" && hostTurn && atCap)}
               onClick={() => pickCategory(category)}
               className="board-card min-h-16 px-3 py-3 text-sm font-black leading-5 disabled:cursor-not-allowed disabled:opacity-40"
               style={pick?.teamIndex != null ? { borderColor: state.teams[pick.teamIndex]?.color } : undefined}
             >
               <CategoryLabel category={category} size={18} className="justify-center font-black" />
-              {activity && (
-                <span className="mt-1 block text-[11px] font-medium text-accent">فعالية</span>
-              )}
+              {activity && <span className="mt-1 block text-[11px] font-medium text-accent">فعالية</span>}
               {pick && (
                 <span className="mt-1 block text-xs font-medium text-muted">
                   {pick.teamIndex == null ? "اختيار المقدم" : state.teams[pick.teamIndex]?.name}
@@ -180,15 +176,14 @@ export function CategoryDraft() {
             فئة عشوائية
           </Button>
         )}
-        {state.mode === "buzzer" && hostTurn && (
+        {state.mode === "buzzer" && hostTurn && state.settings.format === "custom" && (
           <Button onClick={finishDraft} disabled={state.draftPicks.length < state.teams.length}>
             ابدأ اللوحة
           </Button>
         )}
         <p className="text-sm text-muted">
-          {state.mode === "classic"
-            ? "اللوحة: 5 فئات × 5 مستويات = 25 سؤالاً"
-            : `اللوحة: ${Math.max(state.draftPicks.length, state.teams.length)} فئات × 5 مستويات`}
+          اللوحة: {Math.max(state.draftPicks.length, state.mode === "classic" ? target : state.teams.length)} فئات ×{" "}
+          {state.settings.pointTiers.length} مستويات
         </p>
       </Panel>
     </div>

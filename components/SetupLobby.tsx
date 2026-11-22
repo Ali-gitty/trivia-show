@@ -5,14 +5,18 @@ import { BookOpen, RotateCcw, Settings2, Tv, Users, Volume2, VolumeX } from "luc
 import { useTv } from "./TvBridge";
 import { useGame } from "./GameProvider";
 import { Button, Panel } from "./ui";
-import { TEAM_COLORS, TEAM_NAMES, type GameMode } from "@/lib/types";
+import { MATCH_FORMATS, matchFormatOf, type MatchFormatId } from "@/lib/matchFormat";
+import { MAX_BUZZER_CATEGORIES, POINT_VALUES, TEAM_COLORS, TEAM_NAMES, type GameMode, type Points } from "@/lib/types";
 
 export function SetupLobby() {
   const { categories, dispatch, playedIds, resetPlayed, startDraft, state, toggleMute } = useGame();
   const { openLink } = useTv();
   const [mode, setMode] = useState<GameMode>("classic");
   const [count, setCount] = useState(3);
+  const format = state.settings.format;
+  const formatDef = matchFormatOf(format);
   const teamCount = mode === "classic" ? 2 : count;
+  const categoryNeed = state.settings.categoryCount;
   const [names, setNames] = useState<string[]>([...TEAM_NAMES]);
   const [colors, setColors] = useState<string[]>([...TEAM_COLORS]);
 
@@ -21,8 +25,31 @@ export function SetupLobby() {
     return new Set(used).size !== used.length;
   }, [colors, teamCount]);
 
+  const setFormat = (next: MatchFormatId) => {
+    const preset = matchFormatOf(next);
+    dispatch({
+      type: "SET_SETTINGS",
+      settings: {
+        format: next,
+        primarySeconds: preset.primarySeconds,
+        stealSeconds: preset.stealSeconds,
+        categoryCount: preset.categoryCount,
+        pointTiers: [...preset.pointTiers],
+      },
+    });
+  };
+
+  const toggleTier = (tier: Points) => {
+    if (format !== "custom") return;
+    const current = state.settings.pointTiers;
+    const next = current.includes(tier) ? current.filter((item) => item !== tier) : [...current, tier].sort((a, b) => a - b);
+    if (!next.length) return;
+    dispatch({ type: "SET_SETTINGS", settings: { pointTiers: next } });
+  };
+
   const start = () => {
-    if (duplicate || categories.length < (mode === "classic" ? 5 : teamCount)) return;
+    if (duplicate || categories.length < categoryNeed) return;
+    if (mode === "buzzer" && teamCount > categoryNeed) return;
     startDraft(
       mode,
       Array.from({ length: teamCount }, (_, index) => ({
@@ -63,7 +90,7 @@ export function SetupLobby() {
         <ModeCard
           active={mode === "classic"}
           title="وضع الفريقين الكلاسيكي"
-          detail={`فئتان لكل فريق، وفئة يختارها المقدم. مؤقت ${state.settings.primarySeconds} ثانية ثم ${state.settings.stealSeconds} ثانية للفريق الآخر.`}
+          detail={`مؤقت ${state.settings.primarySeconds} ثم ${state.settings.stealSeconds} · ${categoryNeed} فئات · مستويات ${state.settings.pointTiers.join(" / ")}`}
           onClick={() => setMode("classic")}
         />
         <ModeCard
@@ -73,6 +100,93 @@ export function SetupLobby() {
           onClick={() => setMode("buzzer")}
         />
       </div>
+
+      <Panel className="p-5">
+        <h2 className="mb-3 text-xl font-black">إعداد المباراة</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {MATCH_FORMATS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setFormat(item.id)}
+              className={`board-card p-4 text-right ${format === item.id ? "board-card-on" : ""}`}
+            >
+              <p className="text-lg font-black">{item.label}</p>
+              <p className={`mt-1 text-xs leading-5 ${format === item.id ? "opacity-80" : "text-muted"}`}>{item.detail}</p>
+            </button>
+          ))}
+        </div>
+
+        {format === "custom" && (
+          <div className="mt-4 grid gap-4 rounded-2xl border-[3px] border-ink bg-paper p-4">
+            <label className="grid gap-2 text-sm font-bold">
+              عدد الفئات ({categoryNeed})
+              <input
+                type="range"
+                min={3}
+                max={MAX_BUZZER_CATEGORIES}
+                value={categoryNeed}
+                onChange={(event) =>
+                  dispatch({ type: "SET_SETTINGS", settings: { categoryCount: Number(event.target.value) } })
+                }
+              />
+            </label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="grid gap-2 text-sm font-bold">
+                الوقت الأساسي
+                <input
+                  type="number"
+                  min={10}
+                  max={300}
+                  value={state.settings.primarySeconds}
+                  onChange={(event) =>
+                    dispatch({ type: "SET_SETTINGS", settings: { primarySeconds: Number(event.target.value) } })
+                  }
+                  className="field px-3 py-2"
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-bold">
+                فرصة الفريق الآخر
+                <input
+                  type="number"
+                  min={5}
+                  max={120}
+                  value={state.settings.stealSeconds}
+                  onChange={(event) =>
+                    dispatch({ type: "SET_SETTINGS", settings: { stealSeconds: Number(event.target.value) } })
+                  }
+                  className="field px-3 py-2"
+                />
+              </label>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-bold">مستويات النقاط</p>
+              <div className="flex flex-wrap gap-2">
+                {POINT_VALUES.map((tier) => {
+                  const on = state.settings.pointTiers.includes(tier);
+                  return (
+                    <button
+                      key={tier}
+                      type="button"
+                      onClick={() => toggleTier(tier)}
+                      className={`chip px-3 py-1.5 text-sm font-black ${on ? "chip-accent" : ""}`}
+                    >
+                      {tier}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {format !== "custom" && (
+          <p className="mt-3 text-sm text-muted">
+            {formatDef.label}: {state.settings.primarySeconds}/{state.settings.stealSeconds} ثانية · {categoryNeed} فئات ·{" "}
+            {state.settings.pointTiers.join(" / ")}
+          </p>
+        )}
+      </Panel>
 
       <Panel className="p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -130,8 +244,13 @@ export function SetupLobby() {
           ))}
         </div>
         {duplicate && <p className="note-danger mt-3 px-3 py-2 text-sm">اختر لوناً مختلفاً لكل فريق.</p>}
-        {categories.length < (mode === "classic" ? 5 : teamCount) && (
-          <p className="note-danger mt-3 px-3 py-2 text-sm">البنك لا يكفي لعدد الفئات المطلوب.</p>
+        {categories.length < categoryNeed && (
+          <p className="note-danger mt-3 px-3 py-2 text-sm">البنك لا يكفي لعدد الفئات المطلوب ({categoryNeed}).</p>
+        )}
+        {mode === "buzzer" && teamCount > categoryNeed && (
+          <p className="note-danger mt-3 px-3 py-2 text-sm">
+            عدد الفرق أكبر من عدد الفئات في هذا الإعداد. اختر إعداداً بفئات أكثر أو قلّل الفرق.
+          </p>
         )}
       </Panel>
 
@@ -143,7 +262,11 @@ export function SetupLobby() {
         </Button>
       </div>
 
-      <Button className="h-14 text-base" disabled={duplicate} onClick={start}>
+      <Button
+        className="h-14 text-base"
+        disabled={duplicate || categories.length < categoryNeed || (mode === "buzzer" && teamCount > categoryNeed)}
+        onClick={start}
+      >
         ابدأ سحب الفئات
       </Button>
     </div>

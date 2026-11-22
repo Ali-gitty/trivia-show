@@ -9,7 +9,6 @@ import {
   type HostSettings,
   type Outcome,
   type Phase,
-  CLASSIC_CATEGORY_COUNT,
   EXTRA_TIME_SECONDS,
   MAX_BUZZER_CATEGORIES,
   type PowerKind,
@@ -18,6 +17,7 @@ import {
   type Team,
   type TeamPowerKind,
 } from "./types";
+import { classicDraftSteps } from "./matchFormat";
 
 const BASE_COOLDOWN = 3;
 const SKIP_COOLDOWN = 10;
@@ -101,17 +101,25 @@ export function createInitialState(): GameState {
   };
 }
 
+export function draftCategoryTarget(state: GameState) {
+  return Math.min(
+    MAX_BUZZER_CATEGORIES,
+    Math.max(state.mode === "buzzer" ? state.teams.length : 3, state.settings.categoryCount),
+  );
+}
+
 export function draftPlan(state: GameState): { teamIndex: number | null; optional: boolean } | null {
   if (state.phase !== "draft") return null;
+  const target = draftCategoryTarget(state);
   if (state.mode === "classic") {
-    const steps: Array<number | null> = [0, 0, 1, 1, null];
+    const steps = classicDraftSteps(target);
     if (state.draftPicks.length >= steps.length) return null;
     return { teamIndex: steps[state.draftPicks.length] ?? null, optional: false };
   }
   if (state.draftPicks.length < state.teams.length) {
     return { teamIndex: state.draftPicks.length, optional: false };
   }
-  if (state.draftPicks.length >= MAX_BUZZER_CATEGORIES) return { teamIndex: null, optional: true };
+  if (state.draftPicks.length >= target) return { teamIndex: null, optional: true };
   return { teamIndex: null, optional: true };
 }
 
@@ -237,7 +245,7 @@ function spend(state: GameState, teamIndex: number, kind: PowerKind): GameState 
 
 function startBoard(state: GameState, questions: Question[], playedIds: number[]): GameState {
   const categories = state.draftPicks.map((pick) => pick.category);
-  const built = buildBoard(categories, questions, playedIds);
+  const built = buildBoard(categories, questions, playedIds, state.settings.pointTiers);
   if (built.error) return { ...state, draftError: built.error };
   return {
     ...state,
@@ -341,13 +349,17 @@ export function gameReducer(state: GameState, action: Action): GameState {
       const plan = draftPlan(state);
       if (!plan) return state;
       if (state.draftPicks.some((pick) => pick.category === action.category)) return state;
-      if (plan.optional && state.draftPicks.length >= MAX_BUZZER_CATEGORIES) return state;
+      const target = draftCategoryTarget(state);
+      if (plan.optional && state.draftPicks.length >= target) return state;
       const draftPicks = [
         ...state.draftPicks,
         { category: action.category, teamIndex: plan.teamIndex },
       ];
       const next = { ...state, draftPicks, draftError: null };
-      if (state.mode === "classic" && draftPicks.length === CLASSIC_CATEGORY_COUNT) {
+      if (state.mode === "classic" && draftPicks.length === classicDraftSteps(target).length) {
+        return startBoard(next, action.questions, action.playedIds);
+      }
+      if (state.mode === "buzzer" && state.settings.format !== "custom" && draftPicks.length === target) {
         return startBoard(next, action.questions, action.playedIds);
       }
       return next;

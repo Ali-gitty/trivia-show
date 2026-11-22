@@ -45,7 +45,11 @@ export function SettingsModal() {
         <div className="grid content-start gap-4 overflow-y-auto p-4">
           {tab === "timers" && (
             <>
-              <p className="text-sm text-muted">تُطبَّق القيم على الأسئلة التالية في الوضع الكلاسيكي.</p>
+              <p className="text-sm text-muted">
+                إعداد المباراة الحالي: {state.settings.format} · {state.settings.categoryCount} فئات ·{" "}
+                {state.settings.pointTiers.join(" / ")}. غيّر الإعداد من شاشة البداية؛ هنا تعدّل المؤقتات فقط للإعداد المخصص
+                أو للأسئلة التالية.
+              </p>
               <label className="grid gap-2 text-sm font-bold">
                 الوقت الأساسي (ثانية)
                 <input
@@ -72,36 +76,6 @@ export function SettingsModal() {
                   className="field px-3 py-2"
                 />
               </label>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() =>
-                    dispatch({
-                      type: "SET_SETTINGS",
-                      settings: { primarySeconds: 45, stealSeconds: 10 },
-                    })
-                  }
-                >
-                  سريع 45 / 10
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => dispatch({ type: "SET_SETTINGS", settings: { primarySeconds: 60, stealSeconds: 15 } })}
-                >
-                  افتراضي 60 / 15
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() =>
-                    dispatch({
-                      type: "SET_SETTINGS",
-                      settings: { primarySeconds: 90, stealSeconds: 20 },
-                    })
-                  }
-                >
-                  مريح 90 / 20
-                </Button>
-              </div>
             </>
           )}
 

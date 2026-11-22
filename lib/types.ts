@@ -1,10 +1,10 @@
+import { applyFormat, type MatchFormatId } from "./matchFormat";
+
 export const POINT_VALUES = [100, 200, 300, 400, 500] as const;
 
 export type Points = (typeof POINT_VALUES)[number];
 
-/** Classic draft always fills this many categories. */
-export const CLASSIC_CATEGORY_COUNT = 5;
-/** Buzzer draft: each team picks one, then host may add up to this total. */
+/** Absolute ceiling for draft categories in any mode/format. */
 export const MAX_BUZZER_CATEGORIES = 9;
 
 export type BankKind = "trivia" | "activity";
@@ -139,6 +139,9 @@ export type HostSettings = {
   stealSeconds: number;
   speech: boolean;
   speechRate: number;
+  format: MatchFormatId;
+  categoryCount: number;
+  pointTiers: Points[];
 };
 
 export const DEFAULT_HOST_SETTINGS: HostSettings = {
@@ -146,6 +149,9 @@ export const DEFAULT_HOST_SETTINGS: HostSettings = {
   stealSeconds: 15,
   speech: false,
   speechRate: 0.95,
+  format: "normal",
+  categoryCount: 5,
+  pointTiers: [100, 200, 300, 400, 500],
 };
 
 export function clampSpeechRate(value: number) {
@@ -160,11 +166,21 @@ export function clampTimerSeconds(value: number, min: number, max: number) {
 }
 
 export function normalizeHostSettings(input: Partial<HostSettings> | null | undefined): HostSettings {
+  const format = (input?.format as MatchFormatId | undefined) ?? DEFAULT_HOST_SETTINGS.format;
+  const applied = applyFormat(format, {
+    categoryCount: Number(input?.categoryCount ?? DEFAULT_HOST_SETTINGS.categoryCount),
+    pointTiers: (input?.pointTiers as Points[] | undefined) ?? DEFAULT_HOST_SETTINGS.pointTiers,
+    primarySeconds: Number(input?.primarySeconds ?? DEFAULT_HOST_SETTINGS.primarySeconds),
+    stealSeconds: Number(input?.stealSeconds ?? DEFAULT_HOST_SETTINGS.stealSeconds),
+  });
   return {
-    primarySeconds: clampTimerSeconds(Number(input?.primarySeconds ?? DEFAULT_HOST_SETTINGS.primarySeconds), 10, 300),
-    stealSeconds: clampTimerSeconds(Number(input?.stealSeconds ?? DEFAULT_HOST_SETTINGS.stealSeconds), 5, 120),
+    primarySeconds: clampTimerSeconds(applied.primarySeconds, 10, 300),
+    stealSeconds: clampTimerSeconds(applied.stealSeconds, 5, 120),
     speech: input?.speech === true,
     speechRate: clampSpeechRate(Number(input?.speechRate ?? DEFAULT_HOST_SETTINGS.speechRate)),
+    format: applied.format,
+    categoryCount: applied.categoryCount,
+    pointTiers: applied.pointTiers,
   };
 }
 
