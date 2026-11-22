@@ -139,20 +139,25 @@ export function QuestionStage() {
 
             {Object.keys(state.submissions).length > 0 && (
               <div className="grid shrink-0 gap-1 rounded-2xl border-[3px] border-ink bg-paper px-3 py-2 text-sm">
-                <p className="text-xs font-black text-muted">إجابات الجوال</p>
-                {state.teams.map((team) => {
-                  const entry = state.submissions[team.id];
-                  if (!entry) return null;
-                  const player = state.players.find((item) => item.id === entry.playerId);
-                  return (
-                    <p key={team.id}>
-                      <span style={{ color: team.color }} className="font-bold">
+                <p className="text-xs font-black text-muted">من أجاب من الجوال</p>
+                <div className="flex flex-wrap gap-2">
+                  {state.teams.map((team) => {
+                    const entry = state.submissions[team.id];
+                    if (!entry) return null;
+                    const player = state.players.find((item) => item.id === entry.playerId);
+                    return (
+                      <span
+                        key={team.id}
+                        className="chip px-2.5 py-1 text-xs font-bold"
+                        style={{ boxShadow: `inset 5px 0 0 ${team.color}` }}
+                      >
                         {team.name}
+                        {player ? ` · ${player.name}` : ""}
+                        <span className="ms-1 font-medium text-muted">وصل</span>
                       </span>
-                      {player ? ` (${player.name})` : ""}: {entry.text}
-                    </p>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             )}
 
