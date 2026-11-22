@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Dices, Search, Settings2 } from "lucide-react";
+import { CategoryLabel } from "@/lib/categoryIcons";
 import { draftPlan } from "@/lib/gameReducer";
 import { useGame } from "./GameProvider";
 import { Button, Panel } from "./ui";
@@ -59,7 +60,7 @@ export function CategoryDraft() {
               className="chip px-3 py-1 text-sm"
               style={{ boxShadow: team ? `inset 4px 0 0 ${team.color}, 2px 3px 0 var(--shadow)` : undefined }}
             >
-              {pick.category}
+              <CategoryLabel category={pick.category} size={14} />
               <span className="mr-2 text-muted">{team ? team.name : "المقدم"}</span>
             </span>
           );
@@ -96,7 +97,7 @@ export function CategoryDraft() {
               className="board-card min-h-16 px-3 py-3 text-sm font-black leading-5 disabled:cursor-not-allowed disabled:opacity-40"
               style={pick?.teamIndex != null ? { borderColor: state.teams[pick.teamIndex]?.color } : undefined}
             >
-              {category}
+              <CategoryLabel category={category} size={18} className="justify-center font-black" />
               {pick && (
                 <span className="mt-1 block text-xs font-medium text-muted">
                   {pick.teamIndex == null ? "اختيار المقدم" : state.teams[pick.teamIndex]?.name}

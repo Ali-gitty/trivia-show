@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Check, Minus } from "lucide-react";
+import { CategoryLabel } from "@/lib/categoryIcons";
 import { facePoints } from "@/lib/gameReducer";
 import { POINT_VALUES } from "@/lib/types";
 import { useGame } from "./GameProvider";
@@ -26,7 +27,7 @@ export function GameBoard({ dimmed }: { dimmed: boolean }) {
           {categories.map((category) => (
             <div key={category} className="grid gap-2">
               <h2 className="cat-head grid min-h-16 place-items-center px-2 text-center text-sm font-black">
-                {category}
+                <CategoryLabel category={category} stacked size={18} />
               </h2>
               {POINT_VALUES.map((points) => {
                 const tile = state.board.find((item) => item.category === category && item.points === points);
