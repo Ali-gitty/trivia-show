@@ -2,6 +2,11 @@ export const POINT_VALUES = [100, 200, 300, 400, 500] as const;
 
 export type Points = (typeof POINT_VALUES)[number];
 
+/** Classic draft always fills this many categories. */
+export const CLASSIC_CATEGORY_COUNT = 5;
+/** Buzzer draft: each team picks one, then host may add up to this total. */
+export const MAX_BUZZER_CATEGORIES = 9;
+
 export type BankKind = "trivia" | "activity";
 
 export const ACTIVITY_OPTIONS = [

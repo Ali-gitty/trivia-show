@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Check, Minus, Volume2 } from "lucide-react";
+import { boardLayout } from "@/lib/boardLayout";
 import { CategoryLabel } from "@/lib/categoryIcons";
 import { POINT_VALUES } from "@/lib/types";
 import { facePoints, isQuestionPhase, unreachableLead } from "@/lib/gameReducer";
@@ -148,47 +149,59 @@ function MatchView({ snap }: { snap: ScreenSnapshot }) {
   for (const tile of snap.board) {
     if (!categories.includes(tile.category)) categories.push(tile.category);
   }
+  const layout = boardLayout(categories.length);
   return (
     <div className={asking ? "opacity-100" : undefined}>
       <ScoreStrip snap={snap} />
       <LeadBanner snap={snap} />
-      <div className={`mx-auto max-w-7xl px-3 py-5 ${asking ? "pointer-events-none opacity-30" : ""}`}>
-        <div className="overflow-x-auto pb-2">
-          <div
-            className="grid gap-2"
-            style={{ gridTemplateColumns: `repeat(${Math.max(categories.length, 1)}, minmax(148px, 1fr))` }}
-          >
-            {categories.map((category) => (
-              <div key={category} className="grid gap-2">
-                <h2 className="cat-head grid min-h-16 place-items-center px-2 text-center text-sm font-black">
-                  <CategoryLabel category={category} stacked size={18} />
-                </h2>
-                {POINT_VALUES.map((points) => {
-                  const tile = snap.board.find((item) => item.category === category && item.points === points);
-                  if (!tile) return <div key={points} className="tile-spent min-h-20" />;
-                  return (
-                    <div
-                      key={tile.id}
-                      className={`grid min-h-20 place-items-center font-black ${
-                        tile.status === "open" ? "tile-face" : "tile-spent"
-                      }`}
-                    >
-                      {tile.status === "open" && (
-                        <span className="text-2xl leading-none">
-                          {facePoints(tile.points, snap.pointMultiplier)}
-                          {snap.pointMultiplier > 1 && (
-                            <span className="mt-1 block text-[10px] font-bold">×{snap.pointMultiplier}</span>
-                          )}
-                        </span>
-                      )}
-                      {tile.status === "played" && <Check aria-label="تم اللعب" />}
-                      {tile.status === "skipped" && <Minus aria-label="تم التخطي" />}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
+      <div
+        className={`board-fit mx-auto px-2 py-3 ${asking ? "pointer-events-none opacity-30" : ""}`}
+        style={{ height: "calc(100dvh - 5.75rem)" }}
+      >
+        <div
+          className="grid h-full min-h-0 w-full"
+          style={{
+            gridTemplateColumns: `repeat(${layout.cols}, minmax(0, 1fr))`,
+            gap: layout.gap,
+          }}
+        >
+          {categories.map((category) => (
+            <div
+              key={category}
+              className="grid h-full min-h-0 min-w-0"
+              style={{
+                gridTemplateRows: `auto repeat(${POINT_VALUES.length}, minmax(0, 1fr))`,
+                gap: layout.gap,
+              }}
+            >
+              <h2 className={`cat-head grid place-items-center text-center font-black ${layout.headClass}`}>
+                <CategoryLabel category={category} stacked size={layout.labelSize} />
+              </h2>
+              {POINT_VALUES.map((points) => {
+                const tile = snap.board.find((item) => item.category === category && item.points === points);
+                if (!tile) return <div key={points} className={`tile-spent ${layout.tileClass}`} />;
+                return (
+                  <div
+                    key={tile.id}
+                    className={`grid place-items-center font-black ${layout.tileClass} ${
+                      tile.status === "open" ? "tile-face" : "tile-spent"
+                    }`}
+                  >
+                    {tile.status === "open" && (
+                      <span className="leading-none" style={{ fontSize: layout.pointSize }}>
+                        {facePoints(tile.points, snap.pointMultiplier)}
+                        {snap.pointMultiplier > 1 && (
+                          <span className="mt-0.5 block text-[9px] font-bold sm:text-[10px]">×{snap.pointMultiplier}</span>
+                        )}
+                      </span>
+                    )}
+                    {tile.status === "played" && <Check aria-label="تم اللعب" size={layout.cols >= 8 ? 16 : 20} />}
+                    {tile.status === "skipped" && <Minus aria-label="تم التخطي" size={layout.cols >= 8 ? 16 : 20} />}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
       </div>
       {asking && snap.question && <QuestionCard snap={snap} />}
@@ -248,9 +261,9 @@ function QuestionCard({ snap }: { snap: ScreenSnapshot }) {
           : snap.teams[snap.buzzingTeamIndex];
   const timing = snap.phase === "primary" || snap.phase === "steal";
   return (
-    <div className="scrim fixed inset-0 z-30 grid place-items-center p-3">
-      <section className="board-card max-h-[92dvh] w-full max-w-5xl overflow-y-auto p-5 sm:p-8">
-        <div className="mb-4 flex flex-wrap gap-2 text-sm">
+    <div className="scrim z-30">
+      <section className="board-card question-shell gap-3 p-4 sm:p-6">
+        <div className="flex shrink-0 flex-wrap gap-2 text-sm">
           <span className="chip chip-accent px-3 py-1">
             <CategoryLabel category={question.category} size={14} />
           </span>
@@ -260,29 +273,31 @@ function QuestionCard({ snap }: { snap: ScreenSnapshot }) {
           {snap.phase === "buzzOpen" && <span className="chip px-3 py-1">الجرس مفتوح</span>}
         </div>
         {timing && (
-          <div className="mb-4 flex items-center gap-4">
+          <div className="flex shrink-0 items-center gap-3">
             <TimerRing seconds={snap.timer} total={Math.max(1, snap.timerTotal)} paused={snap.timerPaused} />
             <div>
-              <p className="text-sm text-muted">{snap.phase === "primary" ? "الوقت الأساسي" : "فرصة الفريق الآخر"}</p>
-              <p className="text-5xl font-black">{snap.timer}</p>
+              <p className="text-xs text-muted sm:text-sm">
+                {snap.phase === "primary" ? "الوقت الأساسي" : "فرصة الفريق الآخر"}
+              </p>
+              <p className="text-4xl font-black tabular-nums sm:text-5xl">{snap.timer}</p>
             </div>
           </div>
         )}
-        <h2 className="text-3xl font-black leading-relaxed sm:text-5xl">{question.prompt}</h2>
-        {question.options && <ChoiceGrid options={question.options} />}
+        <h2 className="question-prompt min-h-0 shrink font-black">{question.prompt}</h2>
+        {question.options && <ChoiceGrid options={question.options} compact />}
         {question.answer ? (
-          <p className="answer-banner mt-4 px-4 py-3 text-2xl font-black">
+          <p className="answer-banner shrink-0 px-3 py-2 text-lg font-black sm:text-2xl">
             {question.activity ? "معيار التحكيم" : "الإجابة"}: <IsolatedText text={question.answer} />
           </p>
         ) : (
-          <div className="mt-5 rounded-2xl border-[3px] border-ink bg-ink px-4 py-4 text-paper">
+          <div className="shrink-0 rounded-2xl border-[3px] border-ink bg-ink px-3 py-3 text-paper">
             <p className="text-xs font-bold">محجوب عن التلفاز</p>
-            <p className="mt-1 text-2xl font-black">
+            <p className="mt-1 text-lg font-black sm:text-2xl">
               {question.activity ? "معيار التحكيم عند المقدم على الآيباد" : "الإجابة عند المقدم على الآيباد"}
             </p>
           </div>
         )}
-        {snap.notice && <p className="note-danger mt-3 px-4 py-2 text-sm">{snap.notice}</p>}
+        {snap.notice && <p className="note-danger shrink-0 px-3 py-2 text-sm">{snap.notice}</p>}
       </section>
     </div>
   );

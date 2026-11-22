@@ -98,6 +98,39 @@ for (const category of categories.slice(0, 3)) {
 }
 multi = gameReducer(multi, { type: "FINISH_DRAFT", questions, playedIds: [] });
 if (multi.board.length !== 15) throw new Error("multi board");
+
+let padded = gameReducer(createInitialState(), {
+  type: "START_DRAFT",
+  mode: "buzzer",
+  teams: [
+    { name: "أ", color: "#22d3ee" },
+    { name: "ب", color: "#fb923c" },
+  ],
+});
+const padCats = Array.from({ length: 9 }, (_, index) => `فئة-${index + 1}`);
+const padQuestions = padCats.flatMap((category, categoryIndex) =>
+  ([100, 200, 300, 400, 500] as const).map((points, tier) =>
+    question(2000 + categoryIndex * 5 + tier, category, points),
+  ),
+);
+for (const category of padCats) {
+  padded = gameReducer(padded, {
+    type: "PICK_CATEGORY",
+    category,
+    questions: padQuestions,
+    playedIds: [],
+  });
+}
+if (padded.draftPicks.length !== 9) throw new Error("buzzer should allow 9 categories");
+const blocked = gameReducer(padded, {
+  type: "PICK_CATEGORY",
+  category: "فئة-زيادة",
+  questions: padQuestions,
+  playedIds: [],
+});
+if (blocked.draftPicks.length !== 9) throw new Error("buzzer should stop after 9 categories");
+padded = gameReducer(padded, { type: "FINISH_DRAFT", questions: padQuestions, playedIds: [] });
+if (padded.board.length !== 45) throw new Error("nine-category board size");
 const buzzTile = multi.board.find((item) => item.points === 500)!;
 multi = gameReducer(multi, { type: "OPEN_TILE", tileId: buzzTile.id, questions, playedIds: [] });
 multi = gameReducer(multi, { type: "BUZZ", teamIndex: 0 });

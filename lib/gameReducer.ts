@@ -9,7 +9,9 @@ import {
   type HostSettings,
   type Outcome,
   type Phase,
+  CLASSIC_CATEGORY_COUNT,
   EXTRA_TIME_SECONDS,
+  MAX_BUZZER_CATEGORIES,
   type PowerKind,
   type Question,
   type SoundName,
@@ -109,7 +111,7 @@ export function draftPlan(state: GameState): { teamIndex: number | null; optiona
   if (state.draftPicks.length < state.teams.length) {
     return { teamIndex: state.draftPicks.length, optional: false };
   }
-  if (state.draftPicks.length >= 7) return { teamIndex: null, optional: true };
+  if (state.draftPicks.length >= MAX_BUZZER_CATEGORIES) return { teamIndex: null, optional: true };
   return { teamIndex: null, optional: true };
 }
 
@@ -339,13 +341,13 @@ export function gameReducer(state: GameState, action: Action): GameState {
       const plan = draftPlan(state);
       if (!plan) return state;
       if (state.draftPicks.some((pick) => pick.category === action.category)) return state;
-      if (plan.optional && state.draftPicks.length >= 7) return state;
+      if (plan.optional && state.draftPicks.length >= MAX_BUZZER_CATEGORIES) return state;
       const draftPicks = [
         ...state.draftPicks,
         { category: action.category, teamIndex: plan.teamIndex },
       ];
       const next = { ...state, draftPicks, draftError: null };
-      if (state.mode === "classic" && draftPicks.length === 5) {
+      if (state.mode === "classic" && draftPicks.length === CLASSIC_CATEGORY_COUNT) {
         return startBoard(next, action.questions, action.playedIds);
       }
       return next;

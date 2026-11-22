@@ -5,6 +5,7 @@ import { Dices, Search, Settings2 } from "lucide-react";
 import { categoryKind } from "@/lib/board";
 import { CategoryLabel } from "@/lib/categoryIcons";
 import { draftPlan } from "@/lib/gameReducer";
+import { CLASSIC_CATEGORY_COUNT, MAX_BUZZER_CATEGORIES } from "@/lib/types";
 import { useGame } from "./GameProvider";
 import { Button, Panel } from "./ui";
 
@@ -42,9 +43,10 @@ export function CategoryDraft() {
   const detail =
     state.mode === "classic"
       ? "فريقان يختاران فئتين لكل منهما، ثم فئة أخيرة للمقدم."
-      : "كل فريق يختار فئة. يمكن للمقدم إضافة فئات حتى 7 ثم بدء اللوحة.";
+      : `كل فريق يختار فئة. يمكن للمقدم إضافة فئات حتى ${MAX_BUZZER_CATEGORIES} ثم بدء اللوحة.`;
 
-  const canPick = Boolean(plan) && remaining.length > 0 && !(state.mode === "buzzer" && hostTurn && state.draftPicks.length >= 7);
+  const atBuzzerCap = state.mode === "buzzer" && hostTurn && state.draftPicks.length >= MAX_BUZZER_CATEGORIES;
+  const canPick = Boolean(plan) && remaining.length > 0 && !atBuzzerCap;
 
   const pickRandomCategory = () => {
     if (!canPick) return;
@@ -98,7 +100,7 @@ export function CategoryDraft() {
           );
         })}
         <span className="chip chip-accent px-3 py-1 text-sm">
-          {state.draftPicks.length} / {state.mode === "classic" ? 5 : 7}
+          {state.draftPicks.length} / {state.mode === "classic" ? CLASSIC_CATEGORY_COUNT : MAX_BUZZER_CATEGORIES}
         </span>
       </div>
 
@@ -142,7 +144,7 @@ export function CategoryDraft() {
             <button
               key={category}
               type="button"
-              disabled={Boolean(pick) || (state.mode === "buzzer" && hostTurn && state.draftPicks.length >= 7)}
+              disabled={Boolean(pick) || atBuzzerCap}
               onClick={() => pickCategory(category)}
               className="board-card min-h-16 px-3 py-3 text-sm font-black leading-5 disabled:cursor-not-allowed disabled:opacity-40"
               style={pick?.teamIndex != null ? { borderColor: state.teams[pick.teamIndex]?.color } : undefined}

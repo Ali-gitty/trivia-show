@@ -21,18 +21,27 @@ export function IsolatedText({ text, className = "" }: { text: string; className
   );
 }
 
-export function ChoiceGrid({ options }: { options: string[] }) {
+export function ChoiceGrid({ options, compact = false }: { options: string[] ; compact?: boolean }) {
   return (
-    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+    <div className={`grid shrink-0 gap-2 sm:grid-cols-2 ${compact ? "mt-2" : "mt-3"}`}>
       {options.map((option, index) => (
         <div
           key={`${index}-${option}`}
-          className="flex items-center gap-3 rounded-2xl border-[3px] border-ink bg-paper px-3 py-3 shadow-[3px_3px_0_var(--shadow)]"
+          className={`flex items-center gap-2 rounded-2xl border-[3px] border-ink bg-paper shadow-[3px_3px_0_var(--shadow)] ${
+            compact ? "px-2.5 py-2" : "px-3 py-2.5"
+          }`}
         >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border-[2.5px] border-ink bg-card text-sm font-black tabular-nums">
+          <span
+            className={`grid shrink-0 place-items-center rounded-xl border-[2.5px] border-ink bg-card text-sm font-black tabular-nums ${
+              compact ? "h-8 w-8" : "h-9 w-9"
+            }`}
+          >
             {index + 1}
           </span>
-          <IsolatedText text={option} className="min-w-0 flex-1 text-base font-bold leading-7" />
+          <IsolatedText
+            text={option}
+            className={`min-w-0 flex-1 font-bold ${compact ? "text-sm leading-5" : "text-base leading-6"}`}
+          />
         </div>
       ))}
     </div>

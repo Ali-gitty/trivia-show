@@ -36,7 +36,7 @@ export function QuestionStage() {
     <AnimatePresence>
       {open && tile && (
         <motion.div
-          className="scrim fixed inset-0 z-30 grid place-items-center p-3"
+          className="scrim z-30"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -47,10 +47,10 @@ export function QuestionStage() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ duration: 0.25 }}
-            className="board-card max-h-[92dvh] w-full max-w-5xl overflow-y-auto p-5"
+            className="board-card question-shell gap-2 p-3 sm:gap-3 sm:p-5"
           >
-            <div className="mb-4 grid gap-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="grid shrink-0 gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap gap-2 text-sm">
                   <span className="chip chip-accent px-3 py-1">
                     <CategoryLabel category={tile.category} size={14} />
@@ -60,13 +60,13 @@ export function QuestionStage() {
                   {actor && <span className="chip px-3 py-1">يجيب: {actor.name}</span>}
                 </div>
                 {(state.phase === "primary" || state.phase === "steal") && (
-                  <div className="flex items-center gap-3 rounded-2xl border-[3px] border-ink bg-paper px-3 py-2">
+                  <div className="flex items-center gap-2 rounded-2xl border-[3px] border-ink bg-paper px-2.5 py-1.5">
                     <TimerRing seconds={state.timer} total={total} paused={state.timerPaused} />
                     <div>
-                      <p className="text-xs text-muted">
+                      <p className="text-[10px] text-muted sm:text-xs">
                         {state.phase === "primary" ? "الوقت الأساسي" : "فرصة الفريق الآخر"}
                       </p>
-                      <p className="text-3xl font-black tabular-nums leading-none">{state.timer}</p>
+                      <p className="text-2xl font-black tabular-nums leading-none sm:text-3xl">{state.timer}</p>
                     </div>
                     <Button
                       variant="ghost"
@@ -110,17 +110,17 @@ export function QuestionStage() {
               </div>
             </div>
 
-            <h2 className={`font-black leading-relaxed ${activity ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl"}`}>
-              {currentQuestion.question}
-            </h2>
+            <h2 className="question-prompt min-h-0 shrink font-black">{currentQuestion.question}</h2>
             {activity && !state.answerRevealed && (
-              <p className="mt-3 text-sm text-muted">يؤدي الفريق التحدي، ثم يمنح المقدم النقاط حسب معيار التحكيم.</p>
+              <p className="shrink-0 text-xs text-muted sm:text-sm">
+                يؤدي الفريق التحدي، ثم يمنح المقدم النقاط حسب معيار التحكيم.
+              </p>
             )}
 
-            {state.optionsVisible && <ChoiceGrid options={state.optionsOrder} />}
+            {state.optionsVisible && <ChoiceGrid options={state.optionsOrder} compact />}
 
             {state.hostPeek && !state.answerRevealed && (
-              <p className="mt-4 rounded-2xl border-[3px] border-dashed border-ink bg-paper px-4 py-3 text-sm">
+              <p className="shrink-0 rounded-2xl border-[3px] border-dashed border-ink bg-paper px-3 py-2 text-sm">
                 {tvLive
                   ? "ظاهرة على هذا الآيباد فقط"
                   : activity
@@ -131,19 +131,17 @@ export function QuestionStage() {
             )}
 
             {state.answerRevealed && (
-              <p className="answer-banner mt-4 px-4 py-3 font-black">
+              <p className="answer-banner shrink-0 px-3 py-2 font-black">
                 {activity ? "معيار التحكيم" : "الإجابة"}: <IsolatedText text={currentQuestion.answer} />
               </p>
             )}
 
-            {state.notice && (
-              <p className="note-danger mt-3 px-4 py-2 text-sm">{state.notice}</p>
-            )}
+            {state.notice && <p className="note-danger shrink-0 px-3 py-2 text-sm">{state.notice}</p>}
             {allLocked && (
-              <p className="note-danger mt-3 px-4 py-2 text-sm">لا فرق متبقية على الجرس. أغلق السؤال إذا لزم.</p>
+              <p className="note-danger shrink-0 px-3 py-2 text-sm">لا فرق متبقية على الجرس. أغلق السؤال إذا لزم.</p>
             )}
 
-            <div className="mt-5">
+            <div className="min-h-0 shrink">
               <PowerUpBar
                 teams={state.teams}
                 eligible={powerEligible(state)}
@@ -153,62 +151,64 @@ export function QuestionStage() {
               />
             </div>
 
-            {(state.phase === "primary" || state.phase === "steal") && (
-              <Button className="mt-5 h-12 w-full text-base" onClick={() => dispatch({ type: "LOCK" })}>
-                تثبيت الإجابة
-              </Button>
-            )}
-
-            {state.phase === "adjudicate" && !state.answerRevealed && (
-              <Button className="mt-5 h-12 w-full text-base" onClick={() => dispatch({ type: "REVEAL" })}>
-                {activity ? "كشف معيار التحكيم" : "كشف الإجابة"}
-              </Button>
-            )}
-
-            {state.phase === "adjudicate" && state.answerRevealed && (
-              <div className="mt-5 grid gap-2 sm:grid-cols-3">
-                {state.teams.slice(0, 2).map((team, index) => (
-                  <Button key={team.id} onClick={() => dispatch({ type: "AWARD", teamIndex: index })}>
-                    نقاط لـ {team.name} (+{worth})
-                  </Button>
-                ))}
-                <Button variant="danger" onClick={() => dispatch({ type: "AWARD", teamIndex: null })}>
-                  لا أحد / إجابة خاطئة (0)
+            <div className="mt-auto grid shrink-0 gap-2">
+              {(state.phase === "primary" || state.phase === "steal") && (
+                <Button className="h-11 w-full text-base" onClick={() => dispatch({ type: "LOCK" })}>
+                  تثبيت الإجابة
                 </Button>
-              </div>
-            )}
+              )}
 
-            {state.mode === "buzzer" && state.phase !== "resolved" && state.phase !== "adjudicate" && (
-              <div className="mt-5 grid gap-3">
-                <p className="text-xs text-muted">المفاتيح 1–7 للجرس، و Shift+الرقم لسرقة الجرس، و H لمعاينة المقدم.</p>
-                <BuzzerPad
-                  teams={state.teams}
-                  lockedOut={state.lockedOutTeamIds}
-                  buzzingIndex={state.buzzingTeamIndex}
-                  open={state.phase === "buzzOpen"}
-                  stealIndexes={stealEligible(state)}
-                  onBuzz={(index) => dispatch({ type: "BUZZ", teamIndex: index })}
-                  onSteal={(index) => dispatch({ type: "STEAL", teamIndex: index })}
-                />
-                {state.phase === "buzzLocked" && state.buzzingTeamIndex != null && (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <Button onClick={() => dispatch({ type: "BUZZ_CORRECT" })}>إجابة صحيحة (+{worth})</Button>
-                    <Button variant="danger" onClick={() => dispatch({ type: "BUZZ_WRONG" })}>
-                      إجابة خاطئة (−{worth / 2})
+              {state.phase === "adjudicate" && !state.answerRevealed && (
+                <Button className="h-11 w-full text-base" onClick={() => dispatch({ type: "REVEAL" })}>
+                  {activity ? "كشف معيار التحكيم" : "كشف الإجابة"}
+                </Button>
+              )}
+
+              {state.phase === "adjudicate" && state.answerRevealed && (
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {state.teams.slice(0, 2).map((team, index) => (
+                    <Button key={team.id} onClick={() => dispatch({ type: "AWARD", teamIndex: index })}>
+                      نقاط لـ {team.name} (+{worth})
                     </Button>
-                  </div>
-                )}
-                <Button variant="ghost" onClick={() => dispatch({ type: "CLOSE_QUESTION" })}>
-                  تخطي / إغلاق السؤال
-                </Button>
-              </div>
-            )}
+                  ))}
+                  <Button variant="danger" onClick={() => dispatch({ type: "AWARD", teamIndex: null })}>
+                    لا أحد / إجابة خاطئة (0)
+                  </Button>
+                </div>
+              )}
 
-            {state.phase === "resolved" && (
-              <Button className="mt-5" variant="ghost" onClick={() => dispatch({ type: "CONTINUE" })}>
-                متابعة
-              </Button>
-            )}
+              {state.mode === "buzzer" && state.phase !== "resolved" && state.phase !== "adjudicate" && (
+                <div className="grid gap-2">
+                  <p className="text-[11px] text-muted">المفاتيح 1–7 للجرس، و Shift+الرقم لسرقة الجرس، و H لمعاينة المقدم.</p>
+                  <BuzzerPad
+                    teams={state.teams}
+                    lockedOut={state.lockedOutTeamIds}
+                    buzzingIndex={state.buzzingTeamIndex}
+                    open={state.phase === "buzzOpen"}
+                    stealIndexes={stealEligible(state)}
+                    onBuzz={(index) => dispatch({ type: "BUZZ", teamIndex: index })}
+                    onSteal={(index) => dispatch({ type: "STEAL", teamIndex: index })}
+                  />
+                  {state.phase === "buzzLocked" && state.buzzingTeamIndex != null && (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Button onClick={() => dispatch({ type: "BUZZ_CORRECT" })}>إجابة صحيحة (+{worth})</Button>
+                      <Button variant="danger" onClick={() => dispatch({ type: "BUZZ_WRONG" })}>
+                        إجابة خاطئة (−{worth / 2})
+                      </Button>
+                    </div>
+                  )}
+                  <Button variant="ghost" onClick={() => dispatch({ type: "CLOSE_QUESTION" })}>
+                    تخطي / إغلاق السؤال
+                  </Button>
+                </div>
+              )}
+
+              {state.phase === "resolved" && (
+                <Button variant="ghost" onClick={() => dispatch({ type: "CONTINUE" })}>
+                  متابعة
+                </Button>
+              )}
+            </div>
           </motion.section>
         </motion.div>
       )}
@@ -217,24 +217,24 @@ export function QuestionStage() {
 }
 
 function TimerRing({ seconds, total, paused }: { seconds: number; total: number; paused: boolean }) {
-  const radius = 28;
+  const radius = 22;
   const circ = 2 * Math.PI * radius;
   const offset = circ * (1 - Math.max(0, seconds) / total);
   const urgent = seconds <= 10;
   return (
-    <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden>
-      <circle cx="36" cy="36" r={radius} fill="none" stroke="var(--ink)" strokeOpacity="0.2" strokeWidth="6" />
+    <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden>
+      <circle cx="28" cy="28" r={radius} fill="none" stroke="var(--ink)" strokeOpacity="0.2" strokeWidth="5" />
       <circle
-        cx="36"
-        cy="36"
+        cx="28"
+        cy="28"
         r={radius}
         fill="none"
         stroke={urgent ? "var(--danger-ink)" : "var(--accent)"}
-        strokeWidth="6"
+        strokeWidth="5"
         strokeDasharray={circ}
         strokeDashoffset={offset}
         strokeLinecap="round"
-        transform="rotate(-90 36 36)"
+        transform="rotate(-90 28 28)"
         opacity={paused ? 0.45 : 1}
       />
     </svg>
