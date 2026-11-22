@@ -42,10 +42,15 @@ export function CategoryDraft() {
       ? "دور المقدم"
       : `دور ${state.teams[plan.teamIndex]?.name ?? "الفريق"}`;
 
-  const detail =
-    state.mode === "classic"
-      ? `كلاسيكي · ${formatLabel} · ${target} فئات · ${state.settings.pointTiers.join(" / ")}`
-      : `جرس · ${formatLabel} · حتى ${target} فئات · ${state.settings.pointTiers.join(" / ")}`;
+  const modeLabel =
+    state.mode === "buzzer"
+      ? "جرس"
+      : state.mode === "closest"
+        ? "أرقام"
+        : state.mode === "choices"
+          ? "اختيارات"
+          : "كلاسيكي";
+  const detail = `${modeLabel} · ${formatLabel} · ${state.mode === "buzzer" ? "حتى " : ""}${target} فئات · ${state.settings.pointTiers.join(" / ")}`;
 
   const atCap = state.draftPicks.length >= target;
   const canPick = Boolean(plan) && remaining.length > 0 && !(state.mode === "buzzer" && hostTurn && atCap);
@@ -182,8 +187,12 @@ export function CategoryDraft() {
           </Button>
         )}
         <p className="text-sm text-muted">
-          اللوحة: {Math.max(state.draftPicks.length, state.mode === "classic" ? target : state.teams.length)} فئات ×{" "}
-          {state.settings.pointTiers.length} مستويات
+          اللوحة:{" "}
+          {Math.max(
+            state.draftPicks.length,
+            state.mode === "buzzer" ? state.teams.length : target,
+          )}{" "}
+          فئات × {state.settings.pointTiers.length} مستويات
         </p>
       </Panel>
     </div>

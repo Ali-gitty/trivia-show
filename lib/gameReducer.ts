@@ -18,6 +18,11 @@ import {
   type TeamPowerKind,
 } from "./types";
 import { classicDraftSteps } from "./matchFormat";
+import { buildAnswerRange } from "./numberRange";
+
+function usesClassicFlow(mode: GameState["mode"]) {
+  return mode === "classic" || mode === "closest" || mode === "choices";
+}
 
 const BASE_COOLDOWN = 3;
 const SKIP_COOLDOWN = 10;
@@ -51,7 +56,14 @@ export type Action =
   | { type: "PAUSE" }
   | { type: "RESUME" }
   | { type: "LOCK" }
-  | { type: "USE_POWER"; teamIndex: number; kind: TeamPowerKind; options?: string[] }
+  | {
+      type: "USE_POWER";
+      teamIndex: number;
+      kind: TeamPowerKind;
+      options?: string[];
+      correctAnswer?: string;
+      answerNumber?: number;
+    }
   | { type: "BUZZ"; teamIndex: number }
   | { type: "STEAL"; teamIndex: number }
   | { type: "REVEAL" }
@@ -85,6 +97,9 @@ export function createInitialState(): GameState {
     lockedOutTeamIds: [],
     optionsVisible: false,
     optionsOrder: [],
+    rangeVisible: false,
+    rangeLow: null,
+    rangeHigh: null,
     answerRevealed: false,
     hostPeek: false,
     usedThisQuestion: [],
@@ -111,7 +126,7 @@ export function draftCategoryTarget(state: GameState) {
 export function draftPlan(state: GameState): { teamIndex: number | null; optional: boolean } | null {
   if (state.phase !== "draft") return null;
   const target = draftCategoryTarget(state);
-  if (state.mode === "classic") {
+  if (usesClassicFlow(state.mode)) {
     const steps = classicDraftSteps(target);
     if (state.draftPicks.length >= steps.length) return null;
     return { teamIndex: steps[state.draftPicks.length] ?? null, optional: false };
@@ -184,6 +199,9 @@ function questionFields() {
     lockedOutTeamIds: [] as string[],
     optionsVisible: false,
     optionsOrder: [] as string[],
+    rangeVisible: false,
+    rangeLow: null as number | null,
+    rangeHigh: null as number | null,
     answerRevealed: false,
     hostPeek: false,
     usedThisQuestion: [] as GameState["usedThisQuestion"],
@@ -195,13 +213,43 @@ function questionFields() {
 function decay(teams: Team[], used: GameState["usedThisQuestion"]) {
   return teams.map((team, index) => {
     const cooldowns = { ...team.cooldowns };
-    (["time", "choice", "skip", "steal"] as const).forEach((kind) => {
+    (["time", "choice", "range", "cut", "skip", "steal"] as const).forEach((kind) => {
       const spent = used.some((use) => use.teamIndex === index && use.kind === kind);
       if (spent) cooldowns[kind] = cooldownFor(kind);
       else cooldowns[kind] = Math.max(0, cooldowns[kind] - 1);
     });
     return { ...team, cooldowns };
   });
+}
+
+function pickForTile(
+  state: GameState,
+  questions: Question[],
+  tile: { category: string; points: Question["points"]; questionId: number; reused?: boolean },
+  playedIds: number[],
+  exclude: number[],
+) {
+  if (tile.questionId > 0) {
+    const existing = questions.find((item) => item.id === tile.questionId);
+    return existing ? { question: existing, reused: Boolean(tile.reused) } : null;
+  }
+  const direct = selectQuestion(questions, tile.category, tile.points, playedIds, exclude);
+  if (direct) return direct;
+  if (state.mode !== "closest") return null;
+  for (const points of state.settings.pointTiers) {
+    if (points === tile.points) continue;
+    const fallback = selectQuestion(questions, tile.category, points, playedIds, exclude);
+    if (fallback) return fallback;
+  }
+  const pool = questions.filter(
+    (question) => question.category === tile.category && !exclude.includes(question.id),
+  );
+  if (!pool.length) return null;
+  const fresh = pool.filter((question) => !playedIds.includes(question.id));
+  const draw = fresh.length ? fresh : pool;
+  const question = draw[Math.floor(Math.random() * draw.length)];
+  if (!question) return null;
+  return { question, reused: !fresh.length };
 }
 
 function settle(
@@ -245,7 +293,9 @@ function spend(state: GameState, teamIndex: number, kind: PowerKind): GameState 
 
 function startBoard(state: GameState, questions: Question[], playedIds: number[]): GameState {
   const categories = state.draftPicks.map((pick) => pick.category);
-  const built = buildBoard(categories, questions, playedIds, state.settings.pointTiers);
+  const built = buildBoard(categories, questions, playedIds, state.settings.pointTiers, {
+    allowMissingTiers: state.mode === "closest",
+  });
   if (built.error) return { ...state, draftError: built.error };
   return {
     ...state,
@@ -267,7 +317,7 @@ function livePower(state: GameState, teamIndex: number, kind: TeamPowerKind) {
     state.phase === "buzzOpen" ||
     state.phase === "buzzLocked";
   if (!live) return false;
-  if (state.mode === "classic") return powerEligible(state).includes(teamIndex);
+  if (usesClassicFlow(state.mode)) return powerEligible(state).includes(teamIndex);
   return !state.lockedOutTeamIds.includes(team.id);
 }
 
@@ -356,7 +406,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         { category: action.category, teamIndex: plan.teamIndex },
       ];
       const next = { ...state, draftPicks, draftError: null };
-      if (state.mode === "classic" && draftPicks.length === classicDraftSteps(target).length) {
+      if (usesClassicFlow(state.mode) && draftPicks.length === classicDraftSteps(target).length) {
         return startBoard(next, action.questions, action.playedIds);
       }
       if (state.mode === "buzzer" && state.settings.format !== "custom" && draftPicks.length === target) {
@@ -372,21 +422,14 @@ export function gameReducer(state: GameState, action: Action): GameState {
       const tile = state.board.find((item) => item.id === action.tileId && item.status === "open");
       if (!tile) return state;
       const exclude = state.board.map((item) => item.questionId).filter((id) => id > 0);
-      const picked =
-        tile.questionId > 0
-          ? (() => {
-              const existing = action.questions.find((item) => item.id === tile.questionId);
-              return existing
-                ? { question: existing, reused: Boolean(tile.reused) }
-                : null;
-            })()
-          : selectQuestion(action.questions, tile.category, tile.points, action.playedIds, exclude);
+      const picked = pickForTile(state, action.questions, tile, action.playedIds, exclude);
       if (!picked) return { ...state, notice: "لا توجد أسئلة متاحة لهذه الخانة" };
       const board = state.board.map((item) =>
         item.id === tile.id
           ? { ...item, questionId: picked.question.id, reused: picked.reused }
           : item,
       );
+      const choiceOpen = state.mode === "choices";
       const opened = {
         ...state,
         ...questionFields(),
@@ -394,11 +437,13 @@ export function gameReducer(state: GameState, action: Action): GameState {
         currentTileId: tile.id,
         notice: null,
         cue: sound(state, "tile"),
+        optionsVisible: choiceOpen,
+        optionsOrder: choiceOpen ? shuffle([...picked.question.options]) : [],
       };
       if (picked.question.kind === "activity") {
-        return { ...opened, phase: "adjudicate", timer: 0, timerRunning: false };
+        return { ...opened, phase: "adjudicate", timer: 0, timerRunning: false, optionsVisible: false, optionsOrder: [] };
       }
-      if (state.mode === "classic") {
+      if (usesClassicFlow(state.mode)) {
         return {
           ...opened,
           phase: "primary",
@@ -417,10 +462,10 @@ export function gameReducer(state: GameState, action: Action): GameState {
         ...(action.excludeIds ?? []),
         ...state.board.map((item) => item.questionId),
       ];
-      const picked = selectQuestion(
+      const picked = pickForTile(
+        state,
         action.questions,
-        tile.category,
-        tile.points,
+        { ...tile, questionId: 0 },
         action.playedIds,
         exclude,
       );
@@ -432,6 +477,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
           ? { ...item, questionId: picked.question.id, reused: picked.reused }
           : item,
       );
+      const choiceOpen = state.mode === "choices";
       const base = {
         ...state,
         ...questionFields(),
@@ -439,11 +485,13 @@ export function gameReducer(state: GameState, action: Action): GameState {
         currentTileId: tile.id,
         notice: "تم استبدال المحتوى",
         cue: sound(state, "tile"),
+        optionsVisible: choiceOpen,
+        optionsOrder: choiceOpen ? shuffle([...picked.question.options]) : [],
       };
       if (picked.question.kind === "activity") {
-        return { ...base, phase: "adjudicate", timer: 0, timerRunning: false };
+        return { ...base, phase: "adjudicate", timer: 0, timerRunning: false, optionsVisible: false, optionsOrder: [] };
       }
-      if (state.mode === "classic") {
+      if (usesClassicFlow(state.mode)) {
         return {
           ...base,
           phase: "primary",
@@ -517,6 +565,7 @@ export function gameReducer(state: GameState, action: Action): GameState {
         };
       }
       if (action.kind === "choice") {
+        if (state.mode === "closest" || state.mode === "choices") return state;
         if (state.optionsVisible || !action.options?.length) return state;
         return {
           ...spend(state, action.teamIndex, "choice"),
@@ -525,6 +574,36 @@ export function gameReducer(state: GameState, action: Action): GameState {
           cue: sound(state, "power"),
         };
       }
+      if (action.kind === "range") {
+        if (state.mode !== "closest" || state.rangeVisible) return state;
+        if (action.answerNumber == null || !Number.isFinite(action.answerNumber)) return state;
+        const band = buildAnswerRange(action.answerNumber);
+        return {
+          ...spend(state, action.teamIndex, "range"),
+          rangeVisible: true,
+          rangeLow: band.low,
+          rangeHigh: band.high,
+          notice: "نطاق تقريبي ظاهر للجميع",
+          cue: sound(state, "power"),
+        };
+      }
+      if (action.kind === "cut") {
+        if (state.mode !== "choices") return state;
+        if (!action.options?.length || !action.correctAnswer) return state;
+        if (state.optionsOrder.length > 0 && state.optionsOrder.length <= 2) return state;
+        const correct = action.correctAnswer;
+        const wrongs = shuffle(action.options.filter((option) => option !== correct));
+        const keepWrong = wrongs[0];
+        if (!keepWrong) return state;
+        return {
+          ...spend(state, action.teamIndex, "cut"),
+          optionsVisible: true,
+          optionsOrder: shuffle([correct, keepWrong]),
+          notice: "حُذف خياران خاطئان",
+          cue: sound(state, "power"),
+        };
+      }
+      if (action.kind !== "skip") return state;
       const spent = spend(state, action.teamIndex, "skip");
       const nextPicker = (state.activeTeamIndex + 1) % Math.max(1, state.teams.length);
       return settle(spent, "skipped", nextPicker, "power");

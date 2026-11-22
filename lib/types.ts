@@ -72,7 +72,7 @@ export const TEAM_NAMES = [
   "الفريق السابع",
 ];
 
-export type GameMode = "classic" | "buzzer";
+export type GameMode = "classic" | "buzzer" | "closest" | "choices";
 
 export type Phase =
   | "lobby"
@@ -86,9 +86,9 @@ export type Phase =
   | "resolved"
   | "podium";
 
-export type PowerKind = "time" | "choice" | "skip" | "steal";
+export type PowerKind = "time" | "choice" | "range" | "cut" | "skip" | "steal";
 
-export const TEAM_POWER_KINDS = ["time", "choice", "skip"] as const;
+export const TEAM_POWER_KINDS = ["time", "choice", "range", "cut", "skip"] as const;
 export type TeamPowerKind = (typeof TEAM_POWER_KINDS)[number];
 
 export const EXTRA_TIME_SECONDS = 20;
@@ -200,6 +200,9 @@ export type GameState = {
   lockedOutTeamIds: string[];
   optionsVisible: boolean;
   optionsOrder: string[];
+  rangeVisible: boolean;
+  rangeLow: number | null;
+  rangeHigh: number | null;
   answerRevealed: boolean;
   hostPeek: boolean;
   usedThisQuestion: PowerUse[];
@@ -220,17 +223,27 @@ export function isPoints(value: number): value is Points {
 }
 
 export function freshCooldowns(): Cooldowns {
-  return { time: 0, choice: 0, skip: 0, steal: 0 };
+  return { time: 0, choice: 0, range: 0, cut: 0, skip: 0, steal: 0 };
+}
+
+export function teamPowerKindsForMode(mode: GameMode): TeamPowerKind[] {
+  if (mode === "closest") return ["time", "range", "skip"];
+  if (mode === "choices") return ["time", "cut", "skip"];
+  return ["time", "choice", "skip"];
 }
 
 export function normalizeCooldowns(input: Partial<Record<string, number>> | null | undefined): Cooldowns {
   const time = Number(input?.time ?? input?.hint ?? input?.ask ?? 0);
   const choice = Number(input?.choice ?? 0);
+  const range = Number(input?.range ?? 0);
+  const cut = Number(input?.cut ?? 0);
   const skip = Number(input?.skip ?? 0);
   const steal = Number(input?.steal ?? 0);
   return {
     time: Number.isFinite(time) ? Math.max(0, Math.round(time)) : 0,
     choice: Number.isFinite(choice) ? Math.max(0, Math.round(choice)) : 0,
+    range: Number.isFinite(range) ? Math.max(0, Math.round(range)) : 0,
+    cut: Number.isFinite(cut) ? Math.max(0, Math.round(cut)) : 0,
     skip: Number.isFinite(skip) ? Math.max(0, Math.round(skip)) : 0,
     steal: Number.isFinite(steal) ? Math.max(0, Math.round(steal)) : 0,
   };

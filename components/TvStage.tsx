@@ -284,6 +284,12 @@ function QuestionCard({ snap }: { snap: ScreenSnapshot }) {
           </div>
         )}
         <h2 className="question-prompt min-h-0 shrink font-black">{question.prompt}</h2>
+        {snap.mode === "closest" && !question.answer && (
+          <p className="shrink-0 text-sm text-muted">أقرب رقم يفوز — التخمين عند الفرق.</p>
+        )}
+        {question.range && (
+          <p className="note-ok shrink-0 px-3 py-2 text-sm font-bold">النطاق التقريبي: {question.range}</p>
+        )}
         {question.options && <ChoiceGrid options={question.options} compact />}
         {question.answer ? (
           <p className="answer-banner shrink-0 px-3 py-2 text-lg font-black sm:text-2xl">

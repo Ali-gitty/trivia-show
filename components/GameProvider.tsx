@@ -11,7 +11,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { categoriesOf, rememberPlayed } from "@/lib/board";
+import { rememberPlayed } from "@/lib/board";
+import { categoriesForMode, playableQuestions } from "@/lib/modeBank";
+import { parseAnswerNumber } from "@/lib/numberRange";
 import {
   bundledQuestions,
   clearCustomBank,
@@ -79,22 +81,35 @@ function sanitize(input: GameState): GameState {
         const kind: PowerKind | null =
           raw === "hint" || raw === "ask"
             ? "time"
-            : raw === "time" || raw === "choice" || raw === "skip" || raw === "steal"
+            : raw === "time" ||
+                raw === "choice" ||
+                raw === "range" ||
+                raw === "cut" ||
+                raw === "skip" ||
+                raw === "steal"
               ? raw
               : null;
         if (kind == null || typeof use.teamIndex !== "number") return [];
         return [{ teamIndex: use.teamIndex, kind }];
       })
     : [];
+  const mode =
+    input.mode === "buzzer" || input.mode === "closest" || input.mode === "choices" || input.mode === "classic"
+      ? input.mode
+      : "classic";
   return {
     ...base,
     ...input,
+    mode,
     teams,
     board: Array.isArray(input.board) ? input.board : [],
     draftPicks: Array.isArray(input.draftPicks) ? input.draftPicks : [],
     lockedOutTeamIds: Array.isArray(input.lockedOutTeamIds) ? input.lockedOutTeamIds : [],
     usedThisQuestion,
     optionsOrder: Array.isArray(input.optionsOrder) ? input.optionsOrder : [],
+    rangeVisible: Boolean(input.rangeVisible),
+    rangeLow: typeof input.rangeLow === "number" && Number.isFinite(input.rangeLow) ? input.rangeLow : null,
+    rangeHigh: typeof input.rangeHigh === "number" && Number.isFinite(input.rangeHigh) ? input.rangeHigh : null,
     settings: normalizeHostSettings(input.settings),
     pointMultiplier:
       Number.isInteger(Number(input.pointMultiplier)) && Number(input.pointMultiplier) >= 1
@@ -241,26 +256,28 @@ export function GameProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "START_DRAFT", mode, teams });
   }, []);
 
+  const playable = useMemo(() => playableQuestions(bank, state.mode), [bank, state.mode]);
+
   const pickCategory = useCallback((category: string) => {
     dispatch({
       type: "PICK_CATEGORY",
       category,
-      questions: bank,
+      questions: playable,
       playedIds,
     });
-  }, [bank, playedIds]);
+  }, [playable, playedIds]);
 
   const finishDraft = useCallback(() => {
     dispatch({
       type: "FINISH_DRAFT",
-      questions: bank,
+      questions: playable,
       playedIds,
     });
-  }, [bank, playedIds]);
+  }, [playable, playedIds]);
 
   const openTile = useCallback((tileId: string) => {
-    dispatch({ type: "OPEN_TILE", tileId, questions: bank, playedIds });
-  }, [bank, playedIds]);
+    dispatch({ type: "OPEN_TILE", tileId, questions: playable, playedIds });
+  }, [playable, playedIds]);
 
   const usePower = useCallback((teamIndex: number, kind: TeamPowerKind) => {
     const tile = state.board.find((item) => item.id === state.currentTileId);
@@ -270,6 +287,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       teamIndex,
       kind,
       options: question ? [...question.options] : undefined,
+      correctAnswer: question?.answer,
+      answerNumber: question ? parseAnswerNumber(question.answer) ?? undefined : undefined,
     });
   }, [bank, state.board, state.currentTileId]);
 
@@ -339,7 +358,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       bank,
       playedIds,
       ready,
-      categories: categoriesOf(bank),
+      categories: categoriesForMode(bank, state.mode, state.settings.pointTiers),
       currentQuestion,
       dispatch,
       startDraft,

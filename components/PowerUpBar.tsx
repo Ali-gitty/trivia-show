@@ -1,32 +1,44 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ListChecks, SkipForward, Timer } from "lucide-react";
-import type { Phase, Team, TeamPowerKind } from "@/lib/types";
-import { EXTRA_TIME_SECONDS } from "@/lib/types";
+import { BetweenHorizonalStart, ListChecks, Scissors, SkipForward, Timer } from "lucide-react";
+import type { GameMode, Phase, Team, TeamPowerKind } from "@/lib/types";
+import { EXTRA_TIME_SECONDS, teamPowerKindsForMode } from "@/lib/types";
 import { cooldownLabel } from "./ui";
 
-const kinds = [
-  { kind: "time" as const, label: `وقت إضافي +${EXTRA_TIME_SECONDS}`, icon: Timer },
-  { kind: "choice" as const, label: "خيارات متعددة", icon: ListChecks },
-  { kind: "skip" as const, label: "تخطي السؤال", icon: SkipForward },
-];
+const META: Record<
+  TeamPowerKind,
+  { label: string; icon: typeof Timer }
+> = {
+  time: { label: `وقت إضافي +${EXTRA_TIME_SECONDS}`, icon: Timer },
+  choice: { label: "خيارات متعددة", icon: ListChecks },
+  range: { label: "نطاق تقريبي", icon: BetweenHorizonalStart },
+  cut: { label: "احذف خيارين", icon: Scissors },
+  skip: { label: "تخطي السؤال", icon: SkipForward },
+};
 
 export function PowerUpBar({
   teams,
   eligible,
   phase,
+  mode,
   optionsVisible,
+  rangeVisible,
+  optionsCount,
   onUse,
 }: {
   teams: Team[];
   eligible: number[];
   phase: Phase;
+  mode: GameMode;
   optionsVisible: boolean;
+  rangeVisible: boolean;
+  optionsCount: number;
   onUse: (teamIndex: number, kind: TeamPowerKind) => void;
 }) {
   if (!eligible.length) return null;
   const timedPhase = phase === "primary" || phase === "steal";
+  const kinds = teamPowerKindsForMode(mode);
   return (
     <div className="grid gap-2">
       {eligible.map((index) => {
@@ -38,18 +50,22 @@ export function PowerUpBar({
               {team.name}
             </p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {kinds.map((item) => {
-                const turns = team.cooldowns[item.kind];
-                const used = item.kind === "choice" && optionsVisible;
-                const phaseBlocked = item.kind === "time" && !timedPhase;
+              {kinds.map((kind) => {
+                const item = META[kind];
+                const turns = team.cooldowns[kind];
+                const used =
+                  (kind === "choice" && optionsVisible) ||
+                  (kind === "range" && rangeVisible) ||
+                  (kind === "cut" && optionsCount > 0 && optionsCount <= 2);
+                const phaseBlocked = kind === "time" && !timedPhase;
                 const disabled = turns > 0 || used || phaseBlocked;
                 const Icon = item.icon;
                 return (
                   <button
-                    key={item.kind}
+                    key={kind}
                     type="button"
                     disabled={disabled}
-                    onClick={() => onUse(index, item.kind)}
+                    onClick={() => onUse(index, kind)}
                     className="board-btn board-btn-ghost inline-flex w-full min-w-0 items-center justify-between gap-2 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <span className="inline-flex min-w-0 items-center gap-2">

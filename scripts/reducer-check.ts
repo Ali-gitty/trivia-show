@@ -1,5 +1,6 @@
 import { gameReducer, createInitialState, powerEligible, unreachableLead } from "../lib/gameReducer";
 import { numberSequence, optionDirection } from "../lib/direction";
+import { buildAnswerRange, parseAnswerNumber } from "../lib/numberRange";
 import { publicAnnouncement } from "../lib/speech";
 import { normalizeHostSettings } from "../lib/types";
 import type { Question } from "../lib/types";
@@ -294,5 +295,123 @@ if (activity.phase !== "adjudicate" || activity.timerRunning) {
 activity = gameReducer(activity, { type: "REVEAL" });
 activity = gameReducer(activity, { type: "AWARD", teamIndex: 1 });
 if (activity.teams[1].score !== 100 || activity.phase !== "board") throw new Error("activity award");
+
+function numericQuestion(
+  id: number,
+  category: string,
+  points: Question["points"],
+  answer: string,
+): Question {
+  return {
+    id,
+    kind: "trivia",
+    category,
+    points,
+    question: `رقم ${id}`,
+    answer,
+    hint: "تلميح",
+    options: [answer, "1", "2", "3"],
+  };
+}
+
+const closestCats = ["أرقام أ", "أرقام ب", "أرقام ج", "أرقام د", "أرقام هـ"];
+const closestQuestions = closestCats.flatMap((category, categoryIndex) =>
+  ([100, 200, 300, 400, 500] as const).map((points, tier) =>
+    numericQuestion(2000 + categoryIndex * 5 + tier, category, points, String(1000 + tier * 100)),
+  ),
+);
+let closest = gameReducer(createInitialState(), {
+  type: "START_DRAFT",
+  mode: "closest",
+  teams: [
+    { name: "الأول", color: "#22d3ee" },
+    { name: "الثاني", color: "#fb923c" },
+  ],
+});
+for (const category of closestCats) {
+  closest = gameReducer(closest, {
+    type: "PICK_CATEGORY",
+    category,
+    questions: closestQuestions,
+    playedIds: [],
+  });
+}
+if (closest.phase !== "board" || closest.mode !== "closest") throw new Error("closest board");
+const closestTile = closest.board[0]!;
+closest = gameReducer(closest, {
+  type: "OPEN_TILE",
+  tileId: closestTile.id,
+  questions: closestQuestions,
+  playedIds: [],
+});
+if (closest.optionsVisible || closest.optionsOrder.length) throw new Error("closest should not show MCA");
+const closestActor = powerEligible(closest)[0];
+closest = gameReducer(closest, {
+  type: "USE_POWER",
+  teamIndex: closestActor,
+  kind: "choice",
+  options: ["أ", "ب", "ج", "د"],
+});
+if (closest.optionsVisible) throw new Error("choice power blocked in closest");
+closest = gameReducer(closest, {
+  type: "USE_POWER",
+  teamIndex: closestActor,
+  kind: "range",
+  answerNumber: 1180,
+});
+if (!closest.rangeVisible || closest.rangeLow == null || closest.rangeHigh == null) {
+  throw new Error("range power failed");
+}
+if (closest.rangeLow > 1180 || closest.rangeHigh < 1180) throw new Error("range must contain answer");
+if (closest.rangeHigh - closest.rangeLow < 100) throw new Error("range too tight");
+
+let choices = gameReducer(createInitialState(), {
+  type: "START_DRAFT",
+  mode: "choices",
+  teams: [
+    { name: "الأول", color: "#22d3ee" },
+    { name: "الثاني", color: "#fb923c" },
+  ],
+});
+for (const category of categories) {
+  choices = gameReducer(choices, { type: "PICK_CATEGORY", category, questions, playedIds: [] });
+}
+const choiceTile = choices.board[0]!;
+choices = gameReducer(choices, {
+  type: "OPEN_TILE",
+  tileId: choiceTile.id,
+  questions,
+  playedIds: [],
+});
+if (!choices.optionsVisible || choices.optionsOrder.length !== 4) {
+  throw new Error("choices mode should open with four options");
+}
+const choiceActor = powerEligible(choices)[0];
+const openedQuestion = questions.find((item) => item.id === choices.board.find((t) => t.id === choiceTile.id)?.questionId)!;
+choices = gameReducer(choices, {
+  type: "USE_POWER",
+  teamIndex: choiceActor,
+  kind: "cut",
+  options: [...openedQuestion.options],
+  correctAnswer: openedQuestion.answer,
+});
+if (choices.optionsOrder.length !== 2 || !choices.optionsOrder.includes(openedQuestion.answer)) {
+  throw new Error("cut should leave correct + one wrong");
+}
+choices = gameReducer(choices, {
+  type: "USE_POWER",
+  teamIndex: choiceActor,
+  kind: "choice",
+  options: [...openedQuestion.options],
+});
+if (choices.optionsOrder.length !== 2) throw new Error("choice power blocked in choices mode");
+
+if (parseAnswerNumber("١١٨٠ حلقة") !== 1180) throw new Error("arabic digits parse");
+if (parseAnswerNumber("9,000,000") !== 9000000) throw new Error("comma parse");
+const bandA = buildAnswerRange(1180, () => 0.2);
+const bandB = buildAnswerRange(9_000_000, () => 0.4);
+if (bandA.low > 1180 || bandA.high < 1180) throw new Error("1180 out of range");
+if (bandB.low > 9_000_000 || bandB.high < 9_000_000) throw new Error("9m out of range");
+if (bandB.high - bandB.low < 1_000_000) throw new Error("9m range too narrow");
 
 console.log("reducer checks passed");

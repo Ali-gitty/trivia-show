@@ -74,13 +74,18 @@ export function buildBoard(
   questions: Question[],
   playedIds: number[] = [],
   pointTiers: readonly Points[] = POINT_VALUES,
+  options: { allowMissingTiers?: boolean } = {},
 ): { board: Tile[]; error: string | null } {
   void playedIds;
   const tiers = pointTiers.length ? pointTiers : POINT_VALUES;
   const board: Tile[] = [];
   for (const category of categories) {
+    const inCategory = questions.some((question) => question.category === category);
+    if (!inCategory) {
+      return { board: [], error: `لا توجد أسئلة متاحة: ${category}` };
+    }
     for (const points of tiers) {
-      if (!tierAvailable(questions, category, points)) {
+      if (!options.allowMissingTiers && !tierAvailable(questions, category, points)) {
         return { board: [], error: `لا توجد أسئلة متاحة: ${category} / ${points}` };
       }
       board.push({

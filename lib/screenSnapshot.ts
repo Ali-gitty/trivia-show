@@ -1,4 +1,5 @@
 import { draftPlan, facePoints, isQuestionPhase } from "./gameReducer";
+import { formatAnswerRange } from "./numberRange";
 import { PALETTES, PATTERNS, type PaletteId, type PatternId } from "./theme";
 import type { GameState, Outcome, Phase, Question, SoundName } from "./types";
 
@@ -22,6 +23,7 @@ export type ScreenQuestion = {
   prompt: string;
   activity: boolean;
   options: string[] | null;
+  range: string | null;
   answer: string | null;
 };
 
@@ -102,6 +104,10 @@ export function buildSnapshot(
           prompt: question.question,
           activity: question.kind === "activity",
           options: state.optionsVisible ? [...state.optionsOrder] : null,
+          range:
+            state.rangeVisible && state.rangeLow != null && state.rangeHigh != null
+              ? formatAnswerRange(state.rangeLow, state.rangeHigh)
+              : null,
           answer: state.answerRevealed ? question.answer : null,
         }
       : null,

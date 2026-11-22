@@ -21,8 +21,20 @@ state = {
   ...state,
   phase: "primary",
   teams: [
-    { id: "a", name: "الأول", color: "#22d3ee", score: 0, cooldowns: { time: 0, choice: 0, skip: 0, steal: 0 } },
-    { id: "b", name: "الثاني", color: "#fb923c", score: 0, cooldowns: { time: 0, choice: 0, skip: 0, steal: 0 } },
+    {
+      id: "a",
+      name: "الأول",
+      color: "#22d3ee",
+      score: 0,
+      cooldowns: { time: 0, choice: 0, range: 0, cut: 0, skip: 0, steal: 0 },
+    },
+    {
+      id: "b",
+      name: "الثاني",
+      color: "#fb923c",
+      score: 0,
+      cooldowns: { time: 0, choice: 0, range: 0, cut: 0, skip: 0, steal: 0 },
+    },
   ],
   board: [
     {
@@ -68,6 +80,20 @@ const activity = buildSnapshot(
 if (JSON.stringify(activity).includes("معيار سري") || activity.palette !== "kraft") {
   throw new Error("activity criterion leaked");
 }
+
+state = {
+  ...state,
+  mode: "closest",
+  rangeVisible: true,
+  rangeLow: 1000,
+  rangeHigh: 1300,
+  answerRevealed: false,
+  optionsVisible: false,
+  optionsOrder: [],
+};
+const ranged = buildSnapshot(state, question, "kraft");
+if (ranged.question?.range !== "1000 – 1300") throw new Error("range missing from snapshot");
+if (ranged.question.answer !== null) throw new Error("closest answer leaked before reveal");
 
 const published = publishPacket("trivia-show/screen/TEST01", JSON.stringify({ type: "state", seq: 1 }));
 const parsed = parsePackets(published);
