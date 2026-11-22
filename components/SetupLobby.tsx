@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { BookOpen, RotateCcw, Settings2, Smartphone, Users, Volume2, VolumeX } from "lucide-react";
-import { useTv } from "./TvBridge";
 import { useGame } from "./GameProvider";
 import { Button, Panel } from "./ui";
 import { categoriesForMode } from "@/lib/modeBank";
@@ -11,7 +10,6 @@ import { MAX_BUZZER_CATEGORIES, POINT_VALUES, TEAM_COLORS, TEAM_NAMES, type Game
 
 export function SetupLobby() {
   const { bank, dispatch, playedIds, resetPlayed, startDraft, state, toggleMute } = useGame();
-  const { openLink } = useTv();
   const [mode, setMode] = useState<GameMode>("classic");
   const [count, setCount] = useState(3);
   const format = state.settings.format;
@@ -55,13 +53,13 @@ export function SetupLobby() {
   const start = () => {
     if (duplicate || categories.length < categoryNeed) return;
     if (mode === "buzzer" && teamCount > categoryNeed) return;
-    // Arm the room/QR first so phones can receive teams as soon as draft starts.
-    openLink();
-    const teams = Array.from({ length: teamCount }, (_, index) => ({
-      name: names[index] ?? TEAM_NAMES[index],
-      color: colors[index] ?? TEAM_COLORS[index],
-    }));
-    window.requestAnimationFrame(() => startDraft(mode, teams));
+    startDraft(
+      mode,
+      Array.from({ length: teamCount }, (_, index) => ({
+        name: names[index] ?? TEAM_NAMES[index],
+        color: colors[index] ?? TEAM_COLORS[index],
+      })),
+    );
   };
 
   return (
@@ -92,8 +90,8 @@ export function SetupLobby() {
           <Smartphone size={18} /> اتصال اللاعبين
         </h2>
         <p className="text-sm leading-7 text-muted">
-          بعد اختيار الوضع والضغط على «ابدأ سحب الفئات» يظهر رمز QR للاتصال. الجوالات تختار الفئات
-          بالتناوب، وتستخدم القدرات، وترى الخيارات المتعددة عند تفعيلها.
+          بعد اختيار الوضع ستنتقل لتبويب انضمام الجوالات (QR) أولاً، ثم تبدأ سحب الفئات عندما يلتحق
+          الجميع.
         </p>
         <div className="flex flex-wrap gap-2">
           <button
@@ -306,7 +304,7 @@ export function SetupLobby() {
         disabled={duplicate || categories.length < categoryNeed || (mode === "buzzer" && teamCount > categoryNeed)}
         onClick={start}
       >
-        ابدأ سحب الفئات
+        متابعة لانضمام اللاعبين
       </Button>
     </div>
   );

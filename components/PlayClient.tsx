@@ -143,7 +143,11 @@ export function PlayClient() {
         <Panel className="grid w-full max-w-md gap-4 p-5">
           <p className="text-xs text-muted">
             الغرفة {room}
-            {snap?.phase === "draft" ? " · سحب الفئات بدأ" : ""}
+            {snap?.phase === "connect"
+              ? " · انضمام اللاعبين"
+              : snap?.phase === "draft"
+                ? " · سحب الفئات"
+                : ""}
             {relay === "live" ? "" : " · جارٍ الاتصال…"}
           </p>
           <h1 className="text-2xl font-black">اسمك وفريقك</h1>
@@ -157,7 +161,7 @@ export function PlayClient() {
           />
           {!teamsReady ? (
             <p className="text-sm text-muted">
-              بانتظار بدء سحب الفئات من المقدم — ستظهر الفرق هنا فوراً.
+              بانتظار تبويب انضمام اللاعبين من المقدم — ستظهر الفرق هنا فوراً.
             </p>
           ) : (
             <>
@@ -338,10 +342,16 @@ function PlayStage({
 
   return (
     <div className="grid flex-1 gap-4">
-      {snap.phase === "lobby" && (
+      {(snap.phase === "lobby" || snap.phase === "connect") && (
         <Panel className="p-5 text-center">
-          <p className="text-lg font-black">بانتظار بدء السحب</p>
-          <p className="mt-2 text-sm text-muted">اختر فريقك إن لم تفعل، ثم انتظر المقدم.</p>
+          <p className="text-lg font-black">
+            {snap.phase === "connect" ? "بانتظار بدء سحب الفئات" : "بانتظار بدء السحب"}
+          </p>
+          <p className="mt-2 text-sm text-muted">
+            {snap.phase === "connect"
+              ? "انضم لفريقك إن لم تفعل — المقدم سيبدأ السحب بعد اكتمال الانضمام."
+              : "اختر فريقك إن لم تفعل، ثم انتظر المقدم."}
+          </p>
         </Panel>
       )}
 

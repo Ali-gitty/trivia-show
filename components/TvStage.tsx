@@ -98,11 +98,13 @@ export function TvStage() {
         </button>
       )}
       {!snap && <Waiting />}
-      {snap?.phase === "lobby" && <Waiting />}
+      {(snap?.phase === "lobby" || snap?.phase === "connect") && <Waiting />}
       {snap?.phase === "draft" && <DraftView snap={snap} />}
-      {snap && snap.phase !== "lobby" && snap.phase !== "draft" && snap.phase !== "podium" && (
-        <MatchView snap={snap} />
-      )}
+      {snap &&
+        snap.phase !== "lobby" &&
+        snap.phase !== "connect" &&
+        snap.phase !== "draft" &&
+        snap.phase !== "podium" && <MatchView snap={snap} />}
       {snap?.phase === "podium" && <PodiumView snap={snap} />}
     </div>
   );
@@ -113,7 +115,7 @@ function Waiting() {
     <div className="grid min-h-dvh place-content-center gap-3 px-6 text-center">
       <p className="kicker">شاشة التلفاز</p>
       <h1 className="text-5xl font-black">في انتظار المقدم</h1>
-      <p className="text-lg text-muted">الإجابة تبقى على الآيباد إلى أن تُكشف للجميع.</p>
+      <p className="text-lg text-muted">انضموا من الجوال قبل سحب الفئات — الإجابة تبقى على الآيباد حتى الكشف.</p>
     </div>
   );
 }

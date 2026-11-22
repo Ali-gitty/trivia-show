@@ -76,6 +76,7 @@ export type GameMode = "classic" | "buzzer" | "closest" | "choices";
 
 export type Phase =
   | "lobby"
+  | "connect"
   | "draft"
   | "board"
   | "primary"
